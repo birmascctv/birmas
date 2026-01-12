@@ -1,3 +1,7 @@
+ultralytics
+opencv-python
+numpy
+requests
 fastapi
 uvicorn[standard]
 psycopg2-binary
