@@ -1,0 +1,7 @@
+hls: yes
+webrtc: yes
+rtsp: yes
+
+paths:
+  cam1:
+    source: rtsp://user:pass@NVR_IP:554/Streaming/Channels/101

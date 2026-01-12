@@ -1,0 +1,35 @@
+# Node.js dependencies
+/frontend/node_modules/
+/frontend/dist/
+
+# Python dependencies
+/inference/__pycache__/
+/inference/*.pyc
+/backend/__pycache__/
+/backend/*.pyc
+
+# Docker
+**/docker-compose.override.yml
+**/Dockerfile.*.swp
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files
+/storage/*.db
+
+# Model weights (optional, if large)
+/inference/models/*.pt
+
+# Temporary files
+*.tmp
