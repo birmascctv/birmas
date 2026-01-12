@@ -8,6 +8,7 @@ services:
       - "8888:8888"   # HLS/WebRTC
 
   inference:
+    network_mode: host
     build: ./inference
     environment:
       - RTSP_URL=rtsp://mediamtx:8554/cam1
