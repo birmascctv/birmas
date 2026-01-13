@@ -10,8 +10,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 const events = ref([])
-onMounted(() => {
-  const ws = new WebSocket('ws://100.87.93.95:8000/ws/events')
-  ws.onmessage = m => { const ev = JSON.parse(m.data); events.value.unshift(ev); if (events.value.length>50) events.value.pop() }
+onMounted(async () => {
+  // Replace with your droplet IP or domain
+  const res = await fetch('http://localhost:8000/events?camera_id=cam1')
+  events.value = await res.json()
 })
 </script>
