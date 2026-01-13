@@ -2,7 +2,7 @@ import os, time, cv2, requests
 from ultralytics import YOLO
 
 RTSP_URL = os.getenv("RTSP_URL", "rtsp://100.87.93.95:8554/cam1")
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://backend:8000/events")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "http://localhost:8000/events")
 MODEL_PATH = os.getenv("MODEL_PATH", "./best.pt")
 
 model = YOLO(MODEL_PATH)
