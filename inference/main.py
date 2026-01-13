@@ -1,9 +1,9 @@
 import os, time, cv2, requests
 from ultralytics import YOLO
 
-RTSP_URL = os.getenv("RTSP_URL", "rtsp://mediamtx:8554/cam1")
+RTSP_URL = os.getenv("RTSP_URL", "rtsp://100.87.93.95:8554/cam1")
 API_ENDPOINT = os.getenv("API_ENDPOINT", "http://backend:8000/events")
-MODEL_PATH = os.getenv("MODEL_PATH", "models/products_model.pt")
+MODEL_PATH = os.getenv("MODEL_PATH", "inference/best.pt")
 
 model = YOLO(MODEL_PATH)
 cap = cv2.VideoCapture(RTSP_URL)
