@@ -4,7 +4,7 @@ from fastapi import WebSocket
 from pydantic import BaseModel
 import psycopg2
 
-DB_URL = "postgresql://postgres@localhost:5432/cctv"
+DB_URL = "postgresql://postgres:B1rm4sC4m3r4@localhost:5432/cctv"
 #os.getenv("DATABASE_URL")
 conn = psycopg2.connect(DB_URL)
 app = FastAPI()
