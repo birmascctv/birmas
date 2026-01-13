@@ -11,14 +11,18 @@ print("Cap", cap)
 
 try:
     model = YOLO(MODEL_PATH)
+    print("Model loaded successfully")
 except Exception as e:
     print("Model load failed:", e)
 
 while True:
+    if not cap.isOpened():
+        print("RTSP stream not opened — check URL or network")
+
     ok, frame = cap.read()
     if not ok:
-        time.sleep(0.5); continue
-        print("Failed to read frame from RTSP") time.sleep(0.5)
+        time.sleep(0.5)
+        print("Failed to read frame from RTSP")
         continue
     res = model.predict(frame, imgsz=768, conf=0.3, iou=0.45, verbose=False)[0]
     for b in res.boxes:
