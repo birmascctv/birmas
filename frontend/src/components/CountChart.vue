@@ -4,7 +4,15 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { Chart } from 'chart.js'
+import {
+  Chart,
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+} from 'chart.js'
 import API from '@/api.js'
 
 const chartRef = ref(null)
