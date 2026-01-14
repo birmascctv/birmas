@@ -20,11 +20,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/cam1': {
+      '/stream': {
         target: 'http://localhost:8888', // ✅ matches your MediaMTX stream
         changeOrigin: true,
         secure: false,
-        ws: true,
+ //       ws: true,
+        rewrite: (path) => path.replace(/^\/stream/, '')
       }
     }
   }
