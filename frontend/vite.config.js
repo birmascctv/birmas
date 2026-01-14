@@ -4,19 +4,25 @@ import vue from '@vue/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
-    host: '0.0.0.0', // Necessary for Tailscale to pick up the traffic
+    host: '0.0.0.0',
     port: 5173,
+    // This allows Tailscale to connect to the dev server
+    allowedHosts: ['ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net'],
+    hmr: {
+      clientPort: 443
+    },
     proxy: {
-      // 1. Backend API Proxy
+      // Proxying API calls to FastAPI/Backend
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-        // rewrite: (path) => path.replace(/^\/api/, '') // Only use this if your backend doesn't expect '/api' in the URL
+        secure: false,
       },
-      // 2. HLS Stream Proxy
+      // Proxying HLS stream to Media Server
       '/cam1': {
         target: 'http://127.0.0.1:8888',
         changeOrigin: true,
+        secure: false,
       }
     }
   }
