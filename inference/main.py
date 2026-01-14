@@ -26,36 +26,42 @@ except Exception as e:
 while True:
     if not cap.isOpened():
         print("RTSP stream not opened — check URL or network")
-
+        time.sleep(2)
+        continue
     ok, frame = cap.read()
     if not ok:
         time.sleep(0.5)
         print("Failed to read frame from RTSP")
         continue
-    if ok:
-        time.sleep(0.5)
+    else:
         print("Succeed to read frame from RTSP")
-        continue
 
     ok2, frame2 = cap2.read()
     if not ok2:
         time.sleep(0.5)
         print("Failed to read frame from RTSP2")
         continue
-    if ok2:
-        time.sleep(0.5)
+    else:
         print("Succeed to read frame from RTSP")
-        continue
 
-    res = model.predict(frame, imgsz=768, conf=0.3, iou=0.45, verbose=False)[0]
-    for b in res.boxes:
-        label = model.names[int(b.cls)]
-        conf = float(b.conf)
-        print(f"Detected {label} with {conf:.2f} confidence")
-        ev = {
-            "camera_id": "cam1", "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "label": model.names[int(b.cls)], "confidence": float(b.conf),
-            "bbox": [float(x) for x in b.xyxy.tolist()[0]]
-        }
-        try:requests.post(API_ENDPOINT, json=ev, timeout=2)
-        except Exception: pass
+    try:
+        res = model.predict(frame, imgsz=768, conf=0.3, iou=0.45, verbose=False)[0]
+        for b in res.boxes:
+            label = model.names[int(b.cls)]
+            conf = float(b.conf)
+            print(f"Detected {label} with {conf:.2f} confidence")
+            ev = { 
+                "camera_id": "cam1", 
+                "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), 
+                "label": label, 
+                "confidence": conf, 
+                "bbox": [float(x) for x in b.xyxy.tolist()[0]] 
+            } 
+            try: 
+                r = requests.post(API_ENDPOINT, json=ev, timeout=2) 
+                print("Posted event:", r.status_code) 
+            except Exception as e: 
+                print("Failed to post event:", e) 
+    except Exception as e: 
+        print("Inference error:", e) 
+        time.sleep(1)
