@@ -1,11 +1,11 @@
 <template>
-  <canvas id="chart"></canvas>
+  <canvas ref="chartRef"></canvas>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { Chart } from 'chart.js'
-import API from './api.js'   // import your Axios instance
+import API from '@/api.js'   // import your Axios instance
 
 onMounted(async () => {
   try {
