@@ -1,13 +1,23 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import vue from '@vue/plugin-vue'
+
 export default defineConfig({
-    server: {
-        host: '0.0.0.0',
-        port: 5173,
-        allowedHosts: ['ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net'],
-        hmr: {
-            clientPort: 443
-        }
-    },
-    plugins: [vue()]
+  plugins: [vue()],
+  server: {
+    host: '0.0.0.0', // Necessary for Tailscale to pick up the traffic
+    port: 5173,
+    proxy: {
+      // 1. Backend API Proxy
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\/api/, '') // Only use this if your backend doesn't expect '/api' in the URL
+      },
+      // 2. HLS Stream Proxy
+      '/cam1': {
+        target: 'http://127.0.0.1:8888',
+        changeOrigin: true,
+      }
+    }
+  }
 })

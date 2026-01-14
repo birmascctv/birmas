@@ -19,12 +19,17 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import API from './api.js' // Ensure you import your API instance
+
 const events = ref([])
+
 onMounted(async () => {
   try {
+    // Axios simplifies the request:
     const res = await API.get('/events', { params: { camera_id: 'cam1' } })
-    if (!res.ok) throw new Error("Failed to fetch events")
-    events.value = await res.json()
+    
+    // Axios puts the parsed JSON body in res.data
+    events.value = res.data 
   } catch (err) {
     console.error("Error loading events:", err)
   }
