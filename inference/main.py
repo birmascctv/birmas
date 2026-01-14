@@ -7,21 +7,25 @@ from ultralytics import YOLO
 
 
 RTSP_URL = "rtsp://100.87.93.95:8554/cam1"
-RTSP_URLL = "rtsp://178.128.105.184:8554/cam1"
 API_ENDPOINT = "http://localhost:8000/events"
-MODEL_PATH = "./best.pt"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(current_dir, "models", "best.pt")
 
+#MODEL_PATH = "models/best.pt"
 #model = YOLO(MODEL_PATH)
 cap = cv2.VideoCapture(RTSP_URL)
 
-cap2 = cv2.VideoCapture(RTSP_URLL)
-print("Cap", cap)
-
 try:
-    model = YOLO(MODEL_PATH)
+    model = YOLO(model_path)
     print("Model loaded successfully")
+    print("Model classes:", model.names)
+    import numpy as np
+    dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+    res = model.predict(dummy, imgsz=640, verbose=False)[0]
+    print("Dry run inference completed, boxes:", len(res.boxes))
 except Exception as e:
     print("Model load failed:", e)
+    model = None
 
 while True:
     if not cap.isOpened():
@@ -32,14 +36,6 @@ while True:
     if not ok:
         time.sleep(0.5)
         print("Failed to read frame from RTSP")
-        continue
-    else:
-        print("Succeed to read frame from RTSP")
-
-    ok2, frame2 = cap2.read()
-    if not ok2:
-        time.sleep(0.5)
-        print("Failed to read frame from RTSP2")
         continue
     else:
         print("Succeed to read frame from RTSP")
