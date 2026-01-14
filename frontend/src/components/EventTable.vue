@@ -9,7 +9,7 @@
       </tr>
     </thead>
     <tbody><tr v-for="ev in events" :key="ev.ts">
-      <td>{{ new Date(ev.ts).toLocaleString }}</td>
+      <td>{{ new Date(ev.ts).toLocaleString() }}</td>
       <td>{{ ev.camera_id }}</td>
       <td>{{ ev.label }}</td>
       <td>{{ (ev.confidence*100).toFixed(1) }}%</td>
@@ -19,7 +19,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import API from './api.js' // Ensure you import your API instance
+import API from '@/api.js' // Ensure you import your API instance
 
 const events = ref([])
 
