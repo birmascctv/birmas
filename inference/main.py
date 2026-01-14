@@ -32,11 +32,19 @@ while True:
         time.sleep(0.5)
         print("Failed to read frame from RTSP")
         continue
+    if ok:
+        time.sleep(0.5)
+        print("Succeed to read frame from RTSP")
+        continue
 
     ok2, frame2 = cap2.read()
     if not ok2:
         time.sleep(0.5)
         print("Failed to read frame from RTSP2")
+        continue
+    if ok2:
+        time.sleep(0.5)
+        print("Succeed to read frame from RTSP")
         continue
 
     res = model.predict(frame, imgsz=768, conf=0.3, iou=0.45, verbose=False)[0]
