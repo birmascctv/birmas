@@ -6,14 +6,23 @@ from ultralytics import YOLO
 #MODEL_PATH = os.getenv("MODEL_PATH", "./best.pt")
 
 
-RTSP_URL = "rtsp://100.87.93.95:8554/cam1"
+RTSP_URL = "rtsp://100.87.93.95:8554/cam1?tcp"
 API_ENDPOINT = "http://localhost:8000/events"
 #current_dir = os.path.dirname(os.path.abspath(__file__))
 #model_path = os.path.join(current_dir, "models", "best.pt")
 
 MODEL_PATH = "best.pt"
 #model = YOLO(MODEL_PATH)
-cap = cv2.VideoCapture(RTSP_URL)
+
+def open_stream(url):
+    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+    if not cap.isOpened():
+        print("ERROR: Could not open RTSP stream") 
+        return None
+    print("RTSP stream opened successfully") 
+    return cap
+
+cap = open_stream(RTSP_URL)
 
 try:
     model = YOLO(MODEL_PATH)
@@ -28,14 +37,17 @@ except Exception as e:
     model = None
 
 while True:
-    if not cap.isOpened():
-        print("RTSP stream not opened — check URL or network")
+    if cap is None or not cap.isOpened():
+        print("Reopening RTSP stream...")
+        cap = open_stream(RTSP_URL)
         time.sleep(2)
         continue
     ok, frame = cap.read()
     if not ok:
-        time.sleep(0.5)
         print("Failed to read frame from RTSP")
+        cap.release() 
+        cap = open_stream(RTSP_URL)
+        time.sleep(0.5)
         continue
     else:
         print("Succeed to read frame from RTSP")
