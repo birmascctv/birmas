@@ -3,7 +3,7 @@
 import { onMounted } from 'vue'
 import { Chart } from 'chart.js'
 onMounted(async () => {
-  const r = await fetch('http://100.87.93.95:8000/events?camera_id=cam1')
+  const r = await fetch('http://localhost:8000/events?camera_id=cam1')
   const data = await r.json()
   const labels = data.map(d => d.ts)
   const counts = data.map((_, i) => i) // placeholder
