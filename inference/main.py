@@ -8,15 +8,15 @@ from ultralytics import YOLO
 
 RTSP_URL = "rtsp://100.87.93.95:8554/cam1"
 API_ENDPOINT = "http://localhost:8000/events"
-current_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(current_dir, "models", "best.pt")
+#current_dir = os.path.dirname(os.path.abspath(__file__))
+#model_path = os.path.join(current_dir, "models", "best.pt")
 
-#MODEL_PATH = "models/best.pt"
+MODEL_PATH = "models/best.pt"
 #model = YOLO(MODEL_PATH)
 cap = cv2.VideoCapture(RTSP_URL)
 
 try:
-    model = YOLO(model_path)
+    model = YOLO(MODEL_PATH)
     print("Model loaded successfully")
     print("Model classes:", model.names)
     import numpy as np
