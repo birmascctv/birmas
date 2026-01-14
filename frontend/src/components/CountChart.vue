@@ -15,6 +15,8 @@ import {
 } from 'chart.js'
 import API from '@/api.js'
 
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
+
 const chartRef = ref(null)
 
 onMounted(async () => {
