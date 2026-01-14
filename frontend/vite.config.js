@@ -9,23 +9,27 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    strictPort: true,
-    allowedHosts: ['all'], // allow Tailscale Funnel domain
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/cam1': {
-        target: 'http://localhost:8888',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-      }
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
+        allowedHosts: [
+            'ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net', // your Funnel domain
+            'localhost',
+            '127.0.0.1'
+        ],
+        proxy: {
+            '/api': {
+            target: 'http://localhost:8000',
+            changeOrigin: true,
+            secure: false,
+            },
+            '/cam1': {
+            target: 'http://localhost:8888',
+            changeOrigin: true,
+            secure: false,
+            ws: true,
+            }
+        }
     }
-  }
 })
