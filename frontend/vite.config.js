@@ -10,22 +10,21 @@ export default defineConfig({
     }
   },
   server: {
-    host: '0.0.0.0', // Essential for Tailscale/Network access
-    port: 5173,      // Matches your Funnel and Service config
+    host: '0.0.0.0',
+    port: 5173,
     strictPort: true,
+    allowedHosts: ['all'], // allow Tailscale Funnel domain
     proxy: {
-      // Proxies API calls to your backend service
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
       },
-      // Proxies Camera Streams (HLS/Websocket)
       '/cam1': {
-        target: 'http://localhost:8083',
+        target: 'http://localhost:8888',
         changeOrigin: true,
         secure: false,
-        ws: true, // Enable websocket proxying for streams
+        ws: true,
       }
     }
   }
