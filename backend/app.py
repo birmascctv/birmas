@@ -2,7 +2,7 @@ import os
 import json
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from routes import events   # import your events router
+from backend.routes import events   # import your events router
 
 app = FastAPI()
 
