@@ -4,7 +4,7 @@ import requests
 import random
 
 # API endpoint for posting events
-API_ENDPOINT ="http://localhost:8000/events"
+API_ENDPOINT ="http://localhost:8000/api/events"
 
 # Some dummy labels to simulate detections
 DUMMY_LABELS = ["person", "car", "dog", "cat", "bottle", "chair", "tv"]

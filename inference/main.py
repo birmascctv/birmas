@@ -7,7 +7,7 @@ from ultralytics import YOLO
 
 
 RTSP_URL = "rtsp://100.87.93.95:8554/cam1?tcp"
-API_ENDPOINT = "http://localhost:8000/events"
+API_ENDPOINT = "http://localhost:8000/api/events"
 #current_dir = os.path.dirname(os.path.abspath(__file__))
 #model_path = os.path.join(current_dir, "models", "best.pt")
 
