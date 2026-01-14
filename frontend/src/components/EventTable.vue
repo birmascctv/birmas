@@ -22,7 +22,7 @@ import { ref, onMounted } from 'vue'
 const events = ref([])
 onMounted(async () => {
   try {
-    const res = await fetch('http://localhost:8000/events?camera_id=cam1')
+    const res = await API.get('/events', { params: { camera_id: 'cam1' } })
     if (!res.ok) throw new Error("Failed to fetch events")
     events.value = await res.json()
   } catch (err) {
