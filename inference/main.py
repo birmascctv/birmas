@@ -11,7 +11,7 @@ API_ENDPOINT = "http://localhost:8000/events"
 #current_dir = os.path.dirname(os.path.abspath(__file__))
 #model_path = os.path.join(current_dir, "models", "best.pt")
 
-MODEL_PATH = "models/best.pt"
+MODEL_PATH = "best.pt"
 #model = YOLO(MODEL_PATH)
 cap = cv2.VideoCapture(RTSP_URL)
 
