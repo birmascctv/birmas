@@ -23,4 +23,7 @@ def get_events(camera_id: str):
             (camera_id,)
         )
         rows = cur.fetchall()
-    return [{"camera_id": r[0], "ts": r[1].isoformat(), "label": r[2], "confidence": r[3], "bbox": r[4]} for r in rows]
+    return [
+        {"camera_id": r[0], "ts": r[1].isoformat(), "label": r[2], "confidence": r[3], "bbox": r[4]}
+        for r in rows
+    ]
