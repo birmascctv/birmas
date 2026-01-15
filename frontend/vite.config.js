@@ -13,7 +13,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
-    allowedHosts: ['ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net'], // ✅ explicitly allow your Funnel domain
+    allowedHosts: true, //['ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net'], // ✅ explicitly allow your Funnel domain
     proxy: {
       '/api': {
         target: 'http://localhost:8000', // ✅ matches your FastAPI backend
