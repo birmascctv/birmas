@@ -1,28 +1,44 @@
 <template>
   <div class="dashboard bg-slate-100 min-h-screen p-4">
-    <!-- Header -->
-    <header class="mb-4 rounded-lg bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 text-white shadow">
-      <h1 class="text-2xl font-bold tracking-wide">
+    <!-- Header (Pastel) -->
+    <header
+      class="mb-4 rounded-lg bg-gradient-to-r from-sky-400 to-indigo-400 px-6 py-4 text-white shadow-sm"
+    >
+      <h1 class="text-2xl font-semibold tracking-wide">
         📹 CCTV Dashboard
       </h1>
+      <p class="text-sm text-white/90">
+        Real-time monitoring and event analytics
+      </p>
     </header>
 
-    <!-- Live Player -->
+    <!-- Live Video (FULL WIDTH, 16:9) -->
     <section class="card">
       <h2 class="card-title">Live Camera Feed</h2>
-      <LivePlayer />
+
+      <!-- Aspect Ratio Wrapper -->
+      <div class="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
+        <LivePlayer />
+      </div>
     </section>
 
-    <!-- Events Table -->
-    <section class="card">
-      <h2 class="card-title">Recent Events</h2>
-      <EventTable />
-    </section>
+    <!-- Bottom: Table + Chart -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Events Table (scroll only here) -->
+      <div class="card flex flex-col">
+        <h2 class="card-title">Recent Events</h2>
 
-    <!-- Chart -->
-    <section class="card">
-      <h2 class="card-title">Recognition Statistics</h2>
-      <CountChart />
+        <!-- Scroll container -->
+        <div class="flex-1 overflow-y-auto">
+          <EventTable />
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card">
+        <h2 class="card-title">People Count Statistics</h2>
+        <CountChart />
+      </div>
     </section>
   </div>
 </template>
@@ -34,12 +50,6 @@ import EventTable from '../components/EventTable.vue'
 </script>
 
 <style scoped>
-.dashboard {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-
 .card {
   background: white;
   border-radius: 12px;
@@ -48,7 +58,7 @@ import EventTable from '../components/EventTable.vue'
 }
 
 .card-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #1e293b; /* slate-800 */
   margin-bottom: 12px;
