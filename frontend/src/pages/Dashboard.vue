@@ -5,9 +5,6 @@
       <h1 class="text-2xl font-bold tracking-wide">
         📹 CCTV Dashboard
       </h1>
-      <p class="text-sm text-indigo-100">
-        Real-time monitoring and event analytics
-      </p>
     </header>
 
     <!-- Live Player -->
@@ -24,7 +21,7 @@
 
     <!-- Chart -->
     <section class="card">
-      <h2 class="card-title">People Count Statistics</h2>
+      <h2 class="card-title">Recognition Statistics</h2>
       <CountChart />
     </section>
   </div>
