@@ -1,11 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+  <div class="dashboard-wrapper">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-xl font-semibold text-gray-800 dark:text-white">
-        Admin Dashboard
-      </h1>
+    <div class="header">
+      <h1 class="title">Admin Dashboard</h1>
 
+      <!-- Tailwind forms plugin input -->
       <input
         type="text"
         placeholder="Search events..."
@@ -13,11 +12,36 @@
       />
     </div>
 
-    <!-- Grid -->
-    <div class="grid grid-cols-2 gap-3">
-      <LivePlayer class="col-span-2" />
+    <!-- Original grid (UNCHANGED logic) -->
+    <div class="dashboard">
+      <LivePlayer />
       <CountChart />
       <EventTable />
     </div>
   </div>
 </template>
+
+<script setup>
+import LivePlayer from '../components/LivePlayer.vue'
+import CountChart from '../components/CountChart.vue'
+import EventTable from '../components/EventTable.vue'
+</script>
+
+<style>
+.dashboard-wrapper {
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+</style>
