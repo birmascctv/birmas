@@ -7,41 +7,40 @@
       <h1 class="text-2xl font-semibold tracking-wide">
         📹 CCTV Dashboard
       </h1>
-      <p class="text-sm text-white/90">
-        Real-time monitoring and event analytics
-      </p>
     </header>
 
     <!-- Live Video (FULL WIDTH, 16:9) -->
-    <section class="card">
-      <h2 class="card-title">Live Camera Feed</h2>
+    <section class="card flex justify-center">
+      <div class="w-full md:w-2/3">
+        <h2 class="card-title mb-3">Live Camera Feed</h2>
 
-      <!-- Aspect Ratio Wrapper -->
-      <div class="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
-        <LivePlayer />
-      </div>
-    </section>
-
-    <!-- Bottom: Table + Chart -->
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Events Table (scroll only here) -->
-      <div class="card flex flex-col">
-        <h2 class="card-title">Recent Events</h2>
-
-        <!-- Scroll container -->
-        <div class="flex-1 overflow-y-auto">
-          <EventTable />
+        <!-- 16:9 wrapper -->
+        <div class="relative aspect-video bg-black rounded-lg overflow-hidden">
+          <LivePlayer />
         </div>
       </div>
-
-      <!-- Chart -->
-      <div class="card">
-        <h2 class="card-title">People Count Statistics</h2>
-        <CountChart />
-      </div>
     </section>
+
+
+<!-- Bottom: Table + Chart -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+  <!-- Events Table -->
+  <div class="card h-[420px] flex flex-col">
+    <h2 class="card-title">Recent Events</h2>
+
+    <!-- THIS is the scroll container -->
+    <div class="flex-1 overflow-y-auto">
+      <EventTable />
+    </div>
   </div>
-</template>
+
+  <!-- Chart -->
+  <div class="card h-[420px]">
+    <h2 class="card-title">People Count Statistics</h2>
+    <CountChart />
+  </div>
+</section>
+
 
 <script setup>
 import LivePlayer from '../components/LivePlayer.vue'
