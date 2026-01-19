@@ -1,46 +1,54 @@
 <template>
   <div class="dashboard bg-slate-100 min-h-screen p-4">
-    <!-- Header (Pastel) -->
-    <header
-      class="mb-4 rounded-lg bg-gradient-to-r from-sky-400 to-indigo-400 px-6 py-4 text-white shadow-sm"
-    >
-      <h1 class="text-2xl font-semibold tracking-wide">
+
+    <!-- Header -->
+    <header class="mb-4 rounded-xl bg-indigo-100 p-4 shadow">
+      <h1 class="text-2xl font-bold text-indigo-900 flex items-center gap-2">
         📹 CCTV Dashboard
       </h1>
     </header>
 
-    <!-- Live Video (FULL WIDTH, 16:9) -->
-    <section class="card flex justify-center">
+    <!-- Live Video (centered, 2/3 width) -->
+    <section class="bg-white rounded-xl shadow p-4 flex justify-center">
       <div class="w-full md:w-2/3">
-        <h2 class="card-title mb-3">Live Camera Feed</h2>
+        <h2 class="text-lg font-semibold text-slate-700 mb-3">
+          Live Camera Feed
+        </h2>
 
-        <!-- 16:9 wrapper -->
+        <!-- 16:9 container -->
         <div class="relative aspect-video bg-black rounded-lg overflow-hidden">
           <LivePlayer />
         </div>
       </div>
     </section>
 
+    <!-- Bottom section -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
 
-<!-- Bottom: Table + Chart -->
-<section class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-  <!-- Events Table -->
-  <div class="card h-[420px] flex flex-col">
-    <h2 class="card-title">Recent Events</h2>
+      <!-- Events Table -->
+      <div class="bg-white rounded-xl shadow p-4 h-[420px] flex flex-col">
+        <h2 class="text-lg font-semibold text-slate-700 mb-2">
+          Recent Events
+        </h2>
 
-    <!-- THIS is the scroll container -->
-    <div class="flex-1 overflow-y-auto">
-      <EventTable />
-    </div>
+        <!-- Scroll only here -->
+        <div class="flex-1 overflow-y-auto">
+          <EventTable />
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="bg-white rounded-xl shadow p-4 h-[420px]">
+        <h2 class="text-lg font-semibold text-slate-700 mb-2">
+          People Count Statistics
+        </h2>
+        <CountChart />
+      </div>
+
+    </section>
+
   </div>
-
-  <!-- Chart -->
-  <div class="card h-[420px]">
-    <h2 class="card-title">People Count Statistics</h2>
-    <CountChart />
-  </div>
-</section>
-
+</template>
 
 <script setup>
 import LivePlayer from '../components/LivePlayer.vue'
