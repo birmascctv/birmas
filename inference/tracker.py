@@ -13,8 +13,7 @@ class ProductTracker:
 
     def update(self, detections, frame_shape):
         """
-        detections: list of [x1, y1, x2, y2, score, class_id]
-        frame_shape: frame.shape
+        detections: [x1, y1, x2, y2, score, class_id]
         """
 
         if len(detections) == 0:
@@ -25,17 +24,23 @@ class ProductTracker:
             for d in detections
         ])
 
-        online_targets = self.tracker.update(
+        class_ids = [d[5] for d in detections]
+
+        tracks = self.tracker.update(
             dets,
             img_info=(frame_shape[0], frame_shape[1]),
             img_size=(640, 640)
         )
 
         results = []
-        for t in online_targets:
+        for t in tracks:
             x, y, w, h = t.tlwh
+            idx = t.track_id - 1
+            cid = class_ids[idx] if idx < len(class_ids) else None
+
             results.append({
                 "track_id": t.track_id,
+                "class_id": cid,
                 "bbox": [x, y, x + w, y + h]
             })
 

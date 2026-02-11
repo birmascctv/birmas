@@ -1,64 +1,80 @@
-import os, time, cv2, requests
+import time, cv2, requests
 from ultralytics import YOLO
-from tracker import ProductTracker   # 👈 ADD THIS
+from tracker import ProductTracker
 
-RTSP_URL = "rtsp://100.87.93.95:8554/cam1?tcp"
-API_ENDPOINT = "http://localhost:8000/api/events"
+RTSP_URL = "rtsp://localhost:8554/cam1"
+API_ENDPOINT = "http://192.168.68.101:8000/api/events"
 MODEL_PATH = "best.pt"
 
-LOG_TTL = 10  # seconds
+# ---------------- PERFORMANCE SETTINGS ----------------
+IMG_SIZE = 640        # was 768 (faster)
+FRAME_SKIP = 2        # infer every 2nd frame
+LOG_TTL = 8           # seconds (product removed timeout)
+# ------------------------------------------------------
 
 def open_stream(url):
     cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not cap.isOpened():
-        print("ERROR: Could not open RTSP stream")
         return None
-    print("RTSP stream opened successfully")
     return cap
 
 cap = open_stream(RTSP_URL)
 
-# -------------------------
-# Load YOLO
-# -------------------------
-try:
-    model = YOLO(MODEL_PATH)
-    print("Model loaded successfully")
-    print("Model classes:", model.names)
-except Exception as e:
-    print("Model load failed:", e)
-    exit(1)
+# ---------------- LOAD MODEL ----------------
+model = YOLO(MODEL_PATH)
+model.model.eval()
+print("Model loaded:", model.names)
 
-# -------------------------
-# Initialize ByteTrack
-# -------------------------
+# ---------------- INIT TRACKER ----------------
 tracker = ProductTracker(fps=30)
-seen_tracks = {}   # track_id -> last_seen_time
 
-# -------------------------
-# Main loop
-# -------------------------
+# track_id -> {last_seen, label}
+seen_tracks = {}
+
+frame_count = 0
+def open_stream(url):
+    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    if not cap.isOpened():
+        print(f"[ERROR] Unable to open RTSP stream: {url}")
+        return None
+    print(f"[INFO] RTSP stream opened successfully: {url}")
+    return cap
+
+cap = open_stream(RTSP_URL)
+
+# ---------------- MAIN LOOP ----------------
 while True:
     if cap is None or not cap.isOpened():
+        print("[WARN] Stream not opened, retrying...")
         cap = open_stream(RTSP_URL)
-        time.sleep(2)
+        time.sleep(1)
         continue
 
     ok, frame = cap.read()
     if not ok:
+        print("[WARN] Failed to read frame, reconnecting...")
         cap.release()
         cap = open_stream(RTSP_URL)
-        time.sleep(0.5)
         continue
 
+    # Log once when the first frame is successfully read
+    if frame_count == 0:
+        print("[INFO] First frame received from RTSP stream")
+
+    frame_count += 1
+    if frame_count % FRAME_SKIP != 0:
+        continue
+
+    now = time.time()
+
     try:
-        # ==========================================================
-        # 4.1 YOLO → detections (convert format)
-        # ==========================================================
+        # -------- YOLO --------
         res = model.predict(
             frame,
-            imgsz=768,
-            conf=0.3,
+            imgsz=IMG_SIZE,
+            conf=0.35,
             iou=0.45,
             verbose=False
         )[0]
@@ -66,56 +82,53 @@ while True:
         detections = []
         for b in res.boxes:
             x1, y1, x2, y2 = b.xyxy[0].tolist()
-            score = float(b.conf)
-            class_id = int(b.cls)
-
             detections.append([
-                x1, y1, x2, y2, score, class_id
+                x1, y1, x2, y2,
+                float(b.conf),
+                int(b.cls)
             ])
 
-        # ==========================================================
-        # 4.2 ByteTrack → assign IDs
-        # ==========================================================
-        tracked_objects = tracker.update(detections, frame.shape)
+        # -------- BYTETRACK --------
+        tracked = tracker.update(detections, frame.shape)
 
-        now = time.time()
-
-        # ==========================================================
-        # 4.3 Log ONLY new track_ids
-        # ==========================================================
-        for obj in tracked_objects:
+        # -------- PRODUCT ADDED --------
+        for obj in tracked:
             tid = obj["track_id"]
+            label = model.names[obj["class_id"]] if obj["class_id"] is not None else "unknown"
 
             if tid not in seen_tracks:
-                # Map class_id → label
-                class_id = obj.get("class_id", None)
-                label = "unknown"
-                if class_id is not None:
-                    label = model.names[class_id]
-
-                ev = {
+                payload = {
                     "camera_id": "cam1",
-                    "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "event_type": "PRODUCT_ADDED",
                     "label": label,
-                    "track_id": tid,
-                    "bbox": obj["bbox"]
+                    "track_id": tid
                 }
 
-                try:
-                    r = requests.post(API_ENDPOINT, json=ev, timeout=2)
-                    print(f"Logged {label} (ID {tid}) → {r.status_code}")
-                except Exception as e:
-                    print("Failed to post event:", e)
+                requests.post(API_ENDPOINT, json=payload, timeout=2)
+                print(f"+ ADDED {label} (ID {tid})")
 
-                seen_tracks[tid] = now
+                seen_tracks[tid] = {
+                    "last_seen": now,
+                    "label": label
+                }
             else:
-                seen_tracks[tid] = now
+                seen_tracks[tid]["last_seen"] = now
 
-        # Cleanup old IDs
+        # -------- PRODUCT REMOVED --------
         for tid in list(seen_tracks.keys()):
-            if now - seen_tracks[tid] > LOG_TTL:
+            if now - seen_tracks[tid]["last_seen"] > LOG_TTL:
+                payload = {
+                    "camera_id": "cam1",
+                    "event_type": "PRODUCT_REMOVED",
+                    "label": seen_tracks[tid]["label"],
+                    "track_id": tid
+                }
+
+                requests.post(API_ENDPOINT, json=payload, timeout=2)
+                print(f"- REMOVED {seen_tracks[tid]['label']} (ID {tid})")
+
                 del seen_tracks[tid]
 
     except Exception as e:
-        print("Inference error:", e)
+        print("Error:", e)
         time.sleep(1)
