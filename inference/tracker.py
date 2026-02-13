@@ -1,5 +1,5 @@
 import numpy as np
-from yolox.tracker.byte_tracker import BYTETracker
+from yolox_tracker.byte_tracker import BYTETracker
 
 
 class ProductTracker:
