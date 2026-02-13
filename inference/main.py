@@ -4,7 +4,7 @@ from tracker import ProductTracker
 
 RTSP_URL = "rtsp://localhost:8554/cam1"
 API_ENDPOINT = "http://192.168.68.101:8000/api/events"
-MODEL_PATH = "best.pt"
+MODEL_PATH = "models/best.pt"
 
 # ---------------- PERFORMANCE SETTINGS ----------------
 IMG_SIZE = 640        # was 768 (faster)
