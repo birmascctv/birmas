@@ -2,13 +2,15 @@ import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
 
-STREAM_URL = "rtmp://100.87.93.95:1935/cam1"
+# ---------------- CONFIG ----------------
+STREAM_URL = "rtmp://100.87.93.95:1935/cam1"   # server RTMP feed
 API_ENDPOINT = "http://192.168.68.101:8000/api/events"
 MODEL_PATH = "models/best.pt"
 
-IMG_SIZE = 640
-FRAME_SKIP = 2
-LOG_TTL = 8
+IMG_SIZE = 640        # inference image size
+FRAME_SKIP = 2        # infer every 2nd frame
+LOG_TTL = 8           # seconds (product removed timeout)
+# ----------------------------------------
 
 def open_stream(url):
     cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
@@ -31,18 +33,7 @@ tracker = ProductTracker(fps=30)
 
 # track_id -> {last_seen, label}
 seen_tracks = {}
-
 frame_count = 0
-def open_stream(url):
-    cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    if not cap.isOpened():
-        print(f"[ERROR] Unable to open stream: {url}")
-        return None
-    print(f"[INFO] Stream opened successfully: {url}")
-    return cap
-
-cap = open_stream(STREAM_URL)
 
 # ---------------- MAIN LOOP ----------------
 while True:
@@ -59,9 +50,8 @@ while True:
         cap = open_stream(STREAM_URL)
         continue
 
-    # Log once when the first frame is successfully read
     if frame_count == 0:
-        print("[INFO] First frame received from RTSP stream")
+        print("[INFO] First frame received from stream")
 
     frame_count += 1
     if frame_count % FRAME_SKIP != 0:
