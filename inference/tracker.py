@@ -1,15 +1,16 @@
 import numpy as np
+from types import SimpleNamespace
 from yolox_tracker.tracker.byte_tracker import BYTETracker
-
 
 class ProductTracker:
     def __init__(self, fps=30):
-        self.tracker = BYTETracker(
+        args = SimpleNamespace(
             track_thresh=0.5,
-            track_buffer=30,
             match_thresh=0.8,
-            frame_rate=fps
+            track_buffer=30,
+            conf_thresh=0.7,
         )
+        self.tracker = BYTETracker(args, frame_rate=fps)
 
     def update(self, detections, frame_shape):
         """
