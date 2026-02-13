@@ -42,13 +42,13 @@ def open_stream(url):
     print(f"[INFO] RTSP stream opened successfully: {url}")
     return cap
 
-cap = open_stream(RTSP_URL)
+cap = open_stream(STREAM_URL)
 
 # ---------------- MAIN LOOP ----------------
 while True:
     if cap is None or not cap.isOpened():
         print("[WARN] Stream not opened, retrying...")
-        cap = open_stream(RTSP_URL)
+        cap = open_stream(STREAM_URL)
         time.sleep(1)
         continue
 
@@ -56,7 +56,7 @@ while True:
     if not ok:
         print("[WARN] Failed to read frame, reconnecting...")
         cap.release()
-        cap = open_stream(RTSP_URL)
+        cap = open_stream(STREAM_URL)
         continue
 
     # Log once when the first frame is successfully read
