@@ -8,6 +8,10 @@ STREAM_URL = os.getenv("STREAM_URL", "rtmp://localhost:1935/cam1")
 API_ENDPOINT = os.getenv("API_ENDPOINT", "http://100.87.93.95:8000/api/events")
 MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
 
+print(f"[DEBUG] STREAM_URL={STREAM_URL}")
+print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
+print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
+
 IMG_SIZE = 640        # inference image size
 FRAME_SKIP = 2        # infer every 2nd frame
 LOG_TTL = 8           # seconds (product removed timeout)
