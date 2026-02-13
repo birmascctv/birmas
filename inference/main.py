@@ -3,7 +3,7 @@ from ultralytics import YOLO
 from tracker import ProductTracker
 
 # ---------------- CONFIG ----------------
-STREAM_URL = "rtsp://100.87.93.95:8554/cam1"   # server RTSP feed (bridged from RTMP)
+STREAM_URL = "rtmp://localhost:1935/cam1"
 API_ENDPOINT = "http://192.168.68.101:8000/api/events"
 MODEL_PATH = "models/best.pt"
 
