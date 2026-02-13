@@ -3,9 +3,9 @@ from ultralytics import YOLO
 from tracker import ProductTracker
 
 # ---------------- CONFIG ----------------
-STREAM_URL = "rtmp://localhost:1935/cam1"
-API_ENDPOINT = "http://192.168.68.101:8000/api/events"
-MODEL_PATH = "models/best.pt"
+STREAM_URL = os.getenv("STREAM_URL", "rtmp://localhost:1935/cam1")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "http://100.87.93.95:8000/api/events")
+MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
 
 IMG_SIZE = 640        # inference image size
 FRAME_SKIP = 2        # infer every 2nd frame
