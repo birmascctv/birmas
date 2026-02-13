@@ -70,7 +70,7 @@ while True:
         # -------- YOLO --------
         res = model.predict(
             frame,
-            imgsz=IMG_SIZE,
+            imgsz=640,
             conf=0.35,
             iou=0.45,
             verbose=False
