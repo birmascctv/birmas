@@ -1,8 +1,10 @@
-import os
+import sys, os
 import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
 
+print(f"[DEBUG] Running file: {__file__}")
+print(f"[DEBUG] Python executable: {sys.executable}")
 # ---------------- CONFIG ----------------
 STREAM_URL = os.getenv("STREAM_URL", "rtmp://localhost:1935/cam1")
 API_ENDPOINT = os.getenv("API_ENDPOINT", "http://100.87.93.95:8000/api/events")
