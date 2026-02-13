@@ -41,6 +41,7 @@ tracker = ProductTracker(fps=30)
 # track_id -> {last_seen, label}
 seen_tracks = {}
 frame_count = 0
+last_infer = 0  # <-- NEW: track last inference time
 
 # ---------------- MAIN LOOP ----------------
 while True:
@@ -61,16 +62,18 @@ while True:
         print("[INFO] First frame received from stream")
 
     frame_count += 1
-    if frame_count % FRAME_SKIP != 0:
-        continue
 
     now = time.time()
+    # -------- TIME-BASED THROTTLE --------
+    if now - last_infer < 1.0:   # skip until 1 second passes
+        continue
+    last_infer = now
 
     try:
         # -------- YOLO --------
         res = model.predict(
             frame,
-            imgsz=640,
+            imgsz=IMG_SIZE,
             conf=0.35,
             iou=0.45,
             verbose=False
