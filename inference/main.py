@@ -15,7 +15,7 @@ print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
 
 IMG_SIZE = 640        # inference image size
-FRAME_SKIP = 2        # infer every 2nd frame
+FRAME_SKIP = 15        # infer every 2nd frame
 LOG_TTL = 8           # seconds (product removed timeout)
 # ----------------------------------------
 
