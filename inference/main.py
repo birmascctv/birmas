@@ -84,6 +84,7 @@ while True:
                 float(b.conf),
                 int(b.cls)
             ])
+        print(f"[DEBUG] Frame {frame_count}: {len(detections)} detections")
 
         # -------- BYTETRACK --------
         tracked = tracker.update(detections, frame.shape)
