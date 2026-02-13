@@ -37,9 +37,9 @@ def open_stream(url):
     cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not cap.isOpened():
-        print(f"[ERROR] Unable to open RTSP stream: {url}")
+        print(f"[ERROR] Unable to open stream: {url}")
         return None
-    print(f"[INFO] RTSP stream opened successfully: {url}")
+    print(f"[INFO] Stream opened successfully: {url}")
     return cap
 
 cap = open_stream(STREAM_URL)
