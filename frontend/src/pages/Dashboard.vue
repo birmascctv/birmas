@@ -40,7 +40,7 @@
       <!-- Chart -->
       <div class="bg-white rounded-xl shadow p-4 h-[420px]">
         <h2 class="text-lg font-semibold text-slate-700 mb-2">
-          People Count Statistics
+          Product Count Statistics
         </h2>
         <CountChart />
       </div>
