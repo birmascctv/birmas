@@ -2,24 +2,24 @@ import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
 
-RTSP_URL = "rtmp://100.87.93.95:1935/cam1"
+STREAM_URL = "rtmp://100.87.93.95:1935/cam1"
 API_ENDPOINT = "http://192.168.68.101:8000/api/events"
 MODEL_PATH = "models/best.pt"
 
-# ---------------- PERFORMANCE SETTINGS ----------------
-IMG_SIZE = 640        # was 768 (faster)
-FRAME_SKIP = 2        # infer every 2nd frame
-LOG_TTL = 8           # seconds (product removed timeout)
-# ------------------------------------------------------
+IMG_SIZE = 640
+FRAME_SKIP = 2
+LOG_TTL = 8
 
 def open_stream(url):
     cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not cap.isOpened():
+        print(f"[ERROR] Unable to open stream: {url}")
         return None
+    print(f"[INFO] Stream opened successfully: {url}")
     return cap
 
-cap = open_stream(RTSP_URL)
+cap = open_stream(STREAM_URL)
 
 # ---------------- LOAD MODEL ----------------
 model = YOLO(MODEL_PATH)
