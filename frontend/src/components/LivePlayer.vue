@@ -33,8 +33,8 @@ import { onMounted, ref } from 'vue'
 
 const video = ref(null)
 const mode = ref('hls') // default mode
-const hlsUrl = 'http://100.92.82.95:8888/cam1/index.m3u8'
-const webrtcUrl = 'http://100.92.82.95:8889/cam1'
+const hlsUrl = 'http://100.87.93.95:8888/cam1/index.m3u8'
+const webrtcUrl = 'http://100.87.93.95:8889/cam1'
 
 function useHls() {
   mode.value = 'hls'
