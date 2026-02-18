@@ -1,3 +1,10 @@
+<template>
+  <div class="live-player">
+    <!-- This video element is bound to videoEl -->
+    <video ref="videoEl" autoplay playsinline controls></video>
+  </div>
+</template>
+
 <script setup>
 import { onMounted, ref } from 'vue'
 
@@ -24,3 +31,16 @@ onMounted(async () => {
   await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
 })
 </script>
+
+<style scoped>
+.live-player {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+video {
+  width: 100%;
+  max-height: 400px;
+  background: black;
+}
+</style>
