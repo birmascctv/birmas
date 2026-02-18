@@ -32,8 +32,8 @@ import { onMounted, ref, watch } from 'vue'
 
 const video = ref(null)
 const mode = ref('hls') // default
-const hlsUrl = 'http://100.87.93.95:8888/cam1/index.m3u8'
-const webrtcUrl = 'http://100.87.93.95:8889/cam1'
+const hlsUrl = 'https://ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net/stream/cam1/index.m3u8'
+const webrtcUrl = 'https://ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net/cam1'
 
 function initHls() {
   if (video.value) {
