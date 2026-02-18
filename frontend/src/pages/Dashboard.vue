@@ -17,7 +17,13 @@
 
         <!-- 16:9 container -->
         <div class="relative aspect-video bg-black rounded-lg overflow-hidden">
-          <LivePlayer />
+          <iframe
+            src="http://<droplet-tailnet-ip>:8889/cam1"
+            width="100%"
+            height="100%"
+            allow="autoplay; fullscreen"
+            class="absolute inset-0"
+          ></iframe>
         </div>
       </div>
     </section>
