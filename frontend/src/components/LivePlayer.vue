@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 
 const videoEl = ref(null)
-const webrtcApiUrl = 'https://ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net/whep/cam1'
+const webrtcApiUrl = 'https://ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net:8889/whep/cam1'
 
 onMounted(async () => {
   const pc = new RTCPeerConnection()
