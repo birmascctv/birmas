@@ -1,54 +1,25 @@
+#liveplayer.vue
+
 <template>
-  <div class="live-player">
-    <!-- This video element is bound to videoEl -->
-    <video ref="videoEl" autoplay playsinline controls></video>
-  </div>
+  <video ref="v" class="video-player" controls autoplay muted playsinline></video>
 </template>
 
 <script setup>
+import Hls from 'hls.js'
 import { onMounted, ref } from 'vue'
+const v = ref(null)
+const src = '/stream/cam1/index.m3u8'
 
-const videoEl = ref(null)
-const webrtcApiUrl = 'https://ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net:8889/whep/cam1/'
-
-onMounted(async () => {
-  const pc = new RTCPeerConnection()
-
-  pc.ontrack = (event) => {
-    console.log('Received track:', event.streams)
-    videoEl.value.srcObject = event.streams[0]
-  }
-
-  const offer = await pc.createOffer()
-  await pc.setLocalDescription(offer)
-  console.log('Local SDP offer created:', offer.sdp)
-
-  try {
-    const resp = await fetch(webrtcApiUrl, {
-      method: 'POST',
-      body: offer.sdp,
-      headers: { 'Content-Type': 'application/sdp' }
-    })
-    const answerSdp = await resp.text()
-    console.log('Received SDP answer:', answerSdp)
-
-    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
-    console.log('Remote SDP answer applied')
-  } catch (err) {
-    console.error('WebRTC handshake failed:', err)
-  }
+onMounted(() => {
+  if (Hls.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v.value) }
+  else { v.value.src = src }
 })
 </script>
 
 <style scoped>
-.live-player {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-video {
+.video-player {
   width: 100%;
-  max-height: 400px;
-  background: black;
+  height: 100%;
+  object-fit: contain; 
 }
 </style>
