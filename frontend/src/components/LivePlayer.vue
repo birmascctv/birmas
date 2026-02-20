@@ -15,20 +15,28 @@ onMounted(async () => {
   const pc = new RTCPeerConnection()
 
   pc.ontrack = (event) => {
+    console.log('Received track:', event.streams)
     videoEl.value.srcObject = event.streams[0]
   }
 
   const offer = await pc.createOffer()
   await pc.setLocalDescription(offer)
+  console.log('Local SDP offer created:', offer.sdp)
 
-  const resp = await fetch(webrtcApiUrl, {
-    method: 'POST',
-    body: offer.sdp,
-    headers: { 'Content-Type': 'application/sdp' }
-  })
-  const answerSdp = await resp.text()
+  try {
+    const resp = await fetch(webrtcApiUrl, {
+      method: 'POST',
+      body: offer.sdp,
+      headers: { 'Content-Type': 'application/sdp' }
+    })
+    const answerSdp = await resp.text()
+    console.log('Received SDP answer:', answerSdp)
 
-  await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+    await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+    console.log('Remote SDP answer applied')
+  } catch (err) {
+    console.error('WebRTC handshake failed:', err)
+  }
 })
 </script>
 
