@@ -1,5 +1,5 @@
 <template>
-  <table class="text-lg w-full border-collapse">
+  <table class="text-lg w-full border-collapse text-center">
     <thead>
       <tr>
         <th class="border px-3 py-2 bg-slate-100">Time</th>
@@ -23,12 +23,17 @@
 import { ref, onMounted, computed } from 'vue'
 import API from '@/api.js'
 
-const props = defineProps({ filter: String })
+const props = defineProps({
+  filter: String,
+  camera: String
+})
+
 const events = ref([])
 
 onMounted(async () => {
   try {
-    const res = await API.get('/events', { params: { camera_id: 'cam1' } })
+    const params = props.camera === 'all' ? {} : { camera_id: props.camera }
+    const res = await API.get('/events', { params })
     events.value = res.data
   } catch (err) {
     console.error("Error loading events:", err)
