@@ -1,9 +1,11 @@
 <template>
   <div class="flex-1">
-    <canvas v-if="hasData" ref="chartRef"></canvas>
-    <div v-else class="text-center text-slate-400 py-10">
-      No data available
+    <div class="flex gap-2 mb-2">
+      <button @click="chartType = 'bar'" :class="chartType==='bar' ? 'bg-amber-600 text-white px-3 py-1 rounded' : 'bg-stone-200 px-3 py-1 rounded'">Bar</button>
+      <button @click="chartType = 'pie'" :class="chartType==='pie' ? 'bg-amber-600 text-white px-3 py-1 rounded' : 'bg-stone-200 px-3 py-1 rounded'">Pie</button>
     </div>
+    <canvas v-if="hasData" ref="chartRef"></canvas>
+    <div v-else class="text-center text-slate-400 py-10">No data available</div>
   </div>
 </template>
 
@@ -12,7 +14,9 @@ import { onMounted, ref, watch } from 'vue'
 import {
   Chart,
   BarController,
+  PieController,
   BarElement,
+  ArcElement,
   CategoryScale,
   LinearScale,
   Tooltip,
@@ -20,7 +24,7 @@ import {
 } from 'chart.js'
 import API from '@/api.js'
 
-Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
+Chart.register(BarController, PieController, BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const props = defineProps({ range: String, camera: String })
 
@@ -28,6 +32,7 @@ const chartRef = ref(null)
 let chartInstance = null
 const hasData = ref(false)
 const events = ref([])
+const chartType = ref('bar')
 
 const loadData = async () => {
   try {
@@ -59,26 +64,18 @@ const loadData = async () => {
     if (chartInstance) chartInstance.destroy()
     if (chartRef.value && hasData.value) {
       chartInstance = new Chart(chartRef.value, {
-        type: 'bar',
+        type: chartType.value,
         data: {
           labels,
           datasets: [{
             label: 'Detections per Label',
             data: counts,
-            backgroundColor: 'rgba(79, 70, 229, 0.7)'
+            backgroundColor: chartType.value === 'bar'
+              ? 'rgba(202, 138, 4, 0.7)' // amber for bar
+              : ['#fbbf24','#f59e0b','#d97706','#b45309'] // pie slices
           }]
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: { bodyFont: { size: 12 }, titleFont: { size: 14 } }
-          },
-          scales: {
-            x: { ticks: { font: { size: 12 } } },
-            y: { ticks: { font: { size: 12 } } }
-          }
-        }
+        options: { responsive: true }
       })
     }
   } catch (err) {
@@ -88,5 +85,5 @@ const loadData = async () => {
 }
 
 onMounted(loadData)
-watch(() => [props.range, props.camera], loadData)
+watch(() => [props.range, props.camera, chartType.value], loadData)
 </script>
