@@ -1,16 +1,12 @@
 <template>
   <div class="dashboard bg-slate-100 min-h-screen px-12 py-6">
 
-    <!-- Header -->
     <header class="mb-8">
-      <h1 class="text-3xl font-extrabold text-indigo-900 tracking-wide">
-        Birmas
-      </h1>
+      <h1 class="text-3xl font-extrabold text-indigo-900 tracking-wide">Birmas</h1>
     </header>
 
     <!-- Camera Section -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-stretch">
-      <!-- Selected Camera -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <h2 class="text-xl font-bold text-slate-800 mb-3">Selected Camera</h2>
         <select v-model="selectedCam" class="w-40 mb-3 h-8 px-2 border rounded text-sm leading-tight">
@@ -21,7 +17,6 @@
         </div>
       </div>
 
-      <!-- Grid Cameras -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <h2 class="text-xl font-bold text-slate-800 mb-3">All Cameras</h2>
         <div class="grid grid-cols-3 gap-2 flex-1">
@@ -41,7 +36,6 @@
 
     <!-- Bottom Section -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-      <!-- Events Table -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xl font-bold text-slate-800">Recent Events</h2>
@@ -62,7 +56,6 @@
         <EventTable :filter="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
       </div>
 
-      <!-- Chart -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xl font-bold text-slate-800">Product Count Statistics</h2>
