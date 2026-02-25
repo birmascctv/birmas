@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import {
   Chart,
   BarController,
@@ -17,12 +17,32 @@ import API from '@/api.js'
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-const chartRef = ref(null)
+const props = defineProps({
+  range: String,
+  camera: String
+})
 
-onMounted(async () => {
+const chartRef = ref(null)
+let chartInstance = null
+
+const loadData = async () => {
   try {
-    const res = await API.get('/events', { params: { camera_id: 'cam1' } })
-    const data = res.data
+    const params = props.camera === 'all' ? {} : { camera_id: props.camera }
+    const res = await API.get('/events', { params })
+    let data = res.data
+
+    // Filter by range
+    const now = Date.now()
+    if (props.range === 'day') {
+      const cutoff = now - 24*60*60*1000
+      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+    } else if (props.range === 'week') {
+      const cutoff = now - 7*24*60*60*1000
+      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+    } else if (props.range === 'month') {
+      const cutoff = now - 30*24*60*60*1000
+      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+    }
 
     const countsByLabel = {}
     data.forEach(ev => {
@@ -32,8 +52,9 @@ onMounted(async () => {
     const labels = Object.keys(countsByLabel)
     const counts = Object.values(countsByLabel)
 
+    if (chartInstance) chartInstance.destroy()
     if (chartRef.value) {
-      new Chart(chartRef.value, {
+      chartInstance = new Chart(chartRef.value, {
         type: 'bar',
         data: {
           labels,
@@ -59,5 +80,8 @@ onMounted(async () => {
   } catch (err) {
     console.error("Error loading chart data:", err)
   }
-})
+}
+
+onMounted(loadData)
+watch(() => [props.range, props.camera], loadData)
 </script>
