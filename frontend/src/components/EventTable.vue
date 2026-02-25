@@ -63,4 +63,14 @@ const filteredEvents = computed(() => {
   else if (props.filter === 'week') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 7*24*60*60*1000)
   else if (props.filter === 'month') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 30*24*60*60*1000)
   else if (props.filter === '3months') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 90*24*60*60*1000)
-  else if (props.filter === 'year')
+  else if (props.filter === 'year') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 365*24*60*60*1000)
+  return data
+})
+
+const totalPages = computed(() => Math.ceil(filteredEvents.value.length / pageSize))
+
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredEvents.value.slice(start, start + pageSize)
+})
+</script>
