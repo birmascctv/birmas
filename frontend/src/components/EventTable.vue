@@ -1,22 +1,27 @@
 <template>
-  <table class="text-base w-full border-collapse text-center">
-    <thead>
-      <tr>
-        <th class="border px-3 py-2 bg-slate-100">Time</th>
-        <th class="border px-3 py-2 bg-slate-100">Camera</th>
-        <th class="border px-3 py-2 bg-slate-100">Label</th>
-        <th class="border px-3 py-2 bg-slate-100">Conf</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="ev in filteredEvents" :key="ev.ts">
-        <td class="border px-3 py-2">{{ new Date(ev.ts).toLocaleString() }}</td>
-        <td class="border px-3 py-2">{{ ev.camera_id }}</td>
-        <td class="border px-3 py-2">{{ ev.label }}</td>
-        <td class="border px-3 py-2">{{ (ev.confidence*100).toFixed(1) }}%</td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="flex-1">
+    <table v-if="filteredEvents.length" class="text-sm w-full border-collapse text-center">
+      <thead>
+        <tr>
+          <th class="border px-3 py-2 bg-slate-100">Time</th>
+          <th class="border px-3 py-2 bg-slate-100">Camera</th>
+          <th class="border px-3 py-2 bg-slate-100">Label</th>
+          <th class="border px-3 py-2 bg-slate-100">Conf</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="ev in filteredEvents" :key="ev.ts">
+          <td class="border px-3 py-2">{{ new Date(ev.ts).toLocaleString() }}</td>
+          <td class="border px-3 py-2">{{ ev.camera_id }}</td>
+          <td class="border px-3 py-2">{{ ev.label }}</td>
+          <td class="border px-3 py-2">{{ (ev.confidence*100).toFixed(1) }}%</td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="text-center text-slate-400 py-10">
+      No data available
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -37,6 +42,7 @@ const loadData = async () => {
     events.value = res.data
   } catch (err) {
     console.error("Error loading events:", err)
+    events.value = [] // fallback
   }
 }
 
