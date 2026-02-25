@@ -14,7 +14,7 @@
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <h2 class="text-xl font-bold text-slate-800 mb-3">Selected Camera</h2>
         <!-- Shorter height dropdown -->
-        <select v-model="selectedCam" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
+        <select v-model="selectedCam" class="w-40 mb-3 h-8 px-2 border rounded text-sm leading-tight">
           <option v-for="n in 9" :key="n" :value="`cam${n}`">Cam {{n}}</option>
         </select>
         <div class="relative aspect-video bg-black rounded-lg overflow-hidden flex-1">
@@ -53,7 +53,7 @@
         </div>
 
         <!-- Shorter height dropdown -->
-        <select v-model="activeFilter" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
+        <select v-model="activeFilter" class="w-40 mb-3 h-8 px-2 border rounded text-sm leading-tight">
           <option value="day">Last 1 Day</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
@@ -75,7 +75,7 @@
         </div>
 
         <!-- Shorter height dropdown -->
-        <select v-model="chartRange" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
+        <select v-model="chartRange" class="w-40 mb-3 h-8 px-2 border rounded text-sm leading-tight">
           <option value="day">Last 1 Day</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
