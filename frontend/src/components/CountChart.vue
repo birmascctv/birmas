@@ -40,18 +40,21 @@ onMounted(async () => {
           datasets: [{
             label: 'Detections per Label',
             data: counts,
-            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+            backgroundColor: 'rgba(79, 70, 229, 0.7)' // Indigo
           }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: { bodyFont: { size: 14 }, titleFont: { size: 16 } }
+          },
+          scales: {
+            x: { ticks: { font: { size: 14 } } },
+            y: { ticks: { font: { size: 14 } } }
           }
         }
       })
-    } else {
-      console.error("Chart canvas not found")
     }
   } catch (err) {
     console.error("Error loading chart data:", err)

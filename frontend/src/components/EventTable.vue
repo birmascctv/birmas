@@ -1,51 +1,52 @@
 <template>
-  <table>
+  <table class="text-lg w-full border-collapse">
     <thead>
       <tr>
-        <th>Time</th>
-        <th>Camera</th>
-        <th>Label</th>
-        <th>Conf</th>
+        <th class="border px-3 py-2 bg-slate-100">Time</th>
+        <th class="border px-3 py-2 bg-slate-100">Camera</th>
+        <th class="border px-3 py-2 bg-slate-100">Label</th>
+        <th class="border px-3 py-2 bg-slate-100">Conf</th>
       </tr>
     </thead>
-    <tbody><tr v-for="ev in events" :key="ev.ts">
-      <td>{{ new Date(ev.ts).toLocaleString() }}</td>
-      <td>{{ ev.camera_id }}</td>
-      <td>{{ ev.label }}</td>
-      <td>{{ (ev.confidence*100).toFixed(1) }}%</td>
-    </tr></tbody>
+    <tbody>
+      <tr v-for="ev in filteredEvents" :key="ev.ts">
+        <td class="border px-3 py-2">{{ new Date(ev.ts).toLocaleString() }}</td>
+        <td class="border px-3 py-2">{{ ev.camera_id }}</td>
+        <td class="border px-3 py-2">{{ ev.label }}</td>
+        <td class="border px-3 py-2">{{ (ev.confidence*100).toFixed(1) }}%</td>
+      </tr>
+    </tbody>
   </table>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import API from '@/api.js' // Ensure you import your API instance
+import { ref, onMounted, computed } from 'vue'
+import API from '@/api.js'
 
+const props = defineProps({ filter: String })
 const events = ref([])
 
 onMounted(async () => {
   try {
-    // Axios simplifies the request:
     const res = await API.get('/events', { params: { camera_id: 'cam1' } })
-    
-    // Axios puts the parsed JSON body in res.data
-    events.value = res.data 
+    events.value = res.data
   } catch (err) {
     console.error("Error loading events:", err)
   }
 })
-</script>
 
-<style scoped>
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-}
-th {
-  background: #f5f5f5;
-}
-</style>
+const filteredEvents = computed(() => {
+  if (props.filter === 'last25') return events.value.slice(-25)
+  if (props.filter === 'last50') return events.value.slice(-50)
+  if (props.filter === 'hour') {
+    const cutoff = Date.now() - 60*60*1000
+    return events.value.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  }
+  if (props.filter === 'today') {
+    const today = new Date().toDateString()
+    const todayEvents = events.value.filter(ev => new Date(ev.ts).toDateString() === today)
+    return todayEvents.length > 50 ? todayEvents.filter((_, i) => i % 50 === 0) : todayEvents
+  }
+  return events.value
+})
+</script>
