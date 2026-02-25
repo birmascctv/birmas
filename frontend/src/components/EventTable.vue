@@ -67,10 +67,4 @@ const filteredEvents = computed(() => {
   return data
 })
 
-const totalPages = computed(() => Math.ceil(filteredEvents.value.length / pageSize))
-
-const paginatedEvents = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredEvents.value.slice(start, start + pageSize)
-})
-</script>
+const totalPages
