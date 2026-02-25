@@ -2,10 +2,14 @@
   <div class="dashboard bg-stone-100 min-h-screen px-10 py-5">
 
     <!-- Header -->
-    <header class="mb-6">
+    <header class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-slate-700 tracking-wide">
         Birmas
       </h1>
+      <button @click="logout"
+              class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
+        Logout
+      </button>
     </header>
 
     <!-- Camera Section -->
@@ -39,48 +43,33 @@
       </div>
     </section>
 
+    <!-- Unified Filter -->
+    <div class="flex items-center justify-between mb-3">
+      <select v-model="activeFilter" class="w-40 h-7 px-2 py-0.5 border border-stone-300 rounded text-sm leading-tight bg-stone-50 text-slate-700">
+        <option value="day">Last 1 Day</option>
+        <option value="week">Last 1 Week</option>
+        <option value="month">Last 1 Month</option>
+        <option value="3months">Last 3 Months</option>
+        <option value="year">Last 1 Year</option>
+      </select>
+      <button @click="showAllCams = !showAllCams"
+              class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
+        {{ showAllCams ? 'Selected Cam Only' : 'All Cams' }}
+      </button>
+    </div>
+
     <!-- Bottom Section -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
       <!-- Events Table -->
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-lg font-semibold text-slate-700">Recent Events</h2>
-          <button @click="showAllCams = !showAllCams"
-                  class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
-            {{ showAllCams ? 'Selected Cam Only' : 'All Cams' }}
-          </button>
-        </div>
-
-        <select v-model="activeFilter" class="w-40 mb-2 h-7 px-2 py-0.5 border border-stone-300 rounded text-sm leading-tight bg-stone-50 text-slate-700">
-          <option value="day">Last 1 Day</option>
-          <option value="week">Last 1 Week</option>
-          <option value="month">Last 1 Month</option>
-          <option value="3months">Last 3 Months</option>
-          <option value="year">Last 1 Year</option>
-        </select>
-
+        <h2 class="text-lg font-semibold text-slate-700 mb-2">Recent Events</h2>
         <EventTable :filter="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
       </div>
 
       <!-- Chart -->
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-lg font-semibold text-slate-700">Product Count Statistics</h2>
-          <button @click="showAllCams = !showAllCams"
-                  class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
-            {{ showAllCams ? 'Selected Cam Only' : 'All Cams' }}
-          </button>
-        </div>
-
-        <select v-model="chartRange" class="w-40 mb-2 h-7 px-2 py-0.5 border border-stone-300 rounded text-sm leading-tight bg-stone-50 text-slate-700">
-          <option value="day">Last 1 Day</option>
-          <option value="week">Last 1 Week</option>
-          <option value="month">Last 1 Month</option>
-          <option value="3months">Last 3 Months</option>
-          <option value="year">Last 1 Year</option>
-        </select>
-
-        <CountChart :range="chartRange" :camera="showAllCams ? 'all' : selectedCam" />
+        <h2 class="text-lg font-semibold text-slate-700 mb-2">Product Count Statistics</h2>
+        <CountChart :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
       </div>
     </section>
 
@@ -89,12 +78,18 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import LivePlayer from '../components/LivePlayer.vue'
 import CountChart from '../components/CountChart.vue'
 import EventTable from '../components/EventTable.vue'
 
 const selectedCam = ref('cam1')
 const activeFilter = ref('day')
-const chartRange = ref('day')
 const showAllCams = ref(false)
+
+const router = useRouter()
+const logout = () => {
+  localStorage.removeItem('auth')
+  router.push('/login')
+}
 </script>
