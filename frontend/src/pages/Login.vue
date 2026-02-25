@@ -36,7 +36,7 @@ const login = () => {
   // Simple test user list
   const users = [
     { username: 'admin', password: 'password' },
-    { username: 'eva', password: 'secret123' }
+    { username: 'eva', password: 'b1rm4s' }
   ]
 
   const match = users.find(
