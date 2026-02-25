@@ -67,17 +67,22 @@
       </div>
 
       <!-- Chart Section -->
-      <div class="grid grid-cols-2 gap-3">
-        <!-- Bar Chart -->
-        <div class="h-64 bg-white rounded-lg shadow-sm p-4 flex flex-col border border-stone-200">
-          <h2 class="text-lg font-semibold text-amber-700 mb-2">Event Frequency</h2>
-          <CountChart type="bar" :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
+      <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
+        <h2 class="text-lg font-semibold text-amber-700 mb-2">Product Count Statistics</h2>
+        <div class="h-64 flex items-center justify-center">
+          <CountChart :range="activeFilter"
+                      :camera="showAllCams ? 'all' : selectedCam"
+                      :type="chartType" />
         </div>
-
-        <!-- Pie Chart -->
-        <div class="h-64 bg-white rounded-lg shadow-sm p-4 flex flex-col border border-stone-200 items-center justify-center">
-          <h2 class="text-lg font-semibold text-amber-700 mb-2">Event Distribution</h2>
-          <CountChart type="pie" :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
+        <div class="flex gap-2 mt-2">
+          <button @click="chartType = 'bar'"
+                  class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">
+            Bar
+          </button>
+          <button @click="chartType = 'pie'"
+                  class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium">
+            Pie
+          </button>
         </div>
       </div>
     </section>
@@ -95,6 +100,7 @@ import EventTable from '../components/EventTable.vue'
 const selectedCam = ref('cam1')
 const activeFilter = ref('day')
 const showAllCams = ref(false)
+const chartType = ref('bar')
 
 const router = useRouter()
 const logout = () => {
