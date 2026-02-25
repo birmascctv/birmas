@@ -1,30 +1,3 @@
-<template>
-  <div class="flex-1">
-    <div class="flex gap-2 mb-2">
-      <button @click="chartType = 'bar'"
-              :class="chartType==='bar'
-                ? 'bg-amber-600 text-white px-3 py-1 rounded'
-                : 'bg-stone-200 px-3 py-1 rounded'">
-        Bar
-      </button>
-      <button @click="chartType = 'pie'"
-              :class="chartType==='pie'
-                ? 'bg-amber-600 text-white px-3 py-1 rounded'
-                : 'bg-stone-200 px-3 py-1 rounded'">
-        Pie
-      </button>
-    </div>
-
-    <!-- Chart canvas -->
-    <div class="flex items-center justify-center">
-      <canvas v-if="hasData"
-              ref="chartRef"
-              :class="chartType === 'pie' ? 'scale-90' : 'w-full h-full'"></canvas>
-      <div v-else class="text-center text-slate-400 py-10">No data available</div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import {
@@ -78,6 +51,15 @@ const loadData = async () => {
     hasData.value = labels.length > 0
 
     if (chartRef.value && hasData.value) {
+      // generate dynamic red shades for pie
+      const min = Math.min(...counts)
+      const max = Math.max(...counts)
+      const colors = counts.map(val => {
+        const ratio = (val - min) / (max - min || 1)
+        // interpolate light red → dark red
+        return `hsl(0, 80%, ${70 - ratio*40}%)`
+      })
+
       if (!chartInstance) {
         chartInstance = new Chart(chartRef.value, {
           type: chartType.value,
@@ -87,8 +69,8 @@ const loadData = async () => {
               label: 'Detections per Label',
               data: counts,
               backgroundColor: chartType.value === 'bar'
-                ? 'rgba(202, 138, 4, 0.7)' // amber for bar
-                : ['#fbbf24','#f59e0b','#d97706','#b45309'] // pie slices
+                ? 'rgba(220, 38, 38, 0.7)' // red for bar
+                : colors
             }]
           },
           options: {
@@ -97,14 +79,13 @@ const loadData = async () => {
           }
         })
       } else {
-        // ✅ Update instead of destroy/recreate
         chartInstance.config.type = chartType.value
         chartInstance.data.labels = labels
         chartInstance.data.datasets[0].data = counts
         chartInstance.data.datasets[0].backgroundColor =
           chartType.value === 'bar'
-            ? 'rgba(202, 138, 4, 0.7)'
-            : ['#fbbf24','#f59e0b','#d97706','#b45309']
+            ? 'rgba(220, 38, 38, 0.7)'
+            : colors
         chartInstance.update()
       }
     }
