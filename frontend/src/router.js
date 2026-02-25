@@ -14,7 +14,10 @@ const router = createRouter({
 
 // Route guard: block dashboard if not logged in
 router.beforeEach((to, from, next) => {
-  const isAuth = localStorage.getItem('auth') === 'true'
+  const isAuth =
+    localStorage.getItem('auth') === 'true' ||
+    sessionStorage.getItem('auth') === 'true'
+
   if (to.path.startsWith('/dashboard') && !isAuth) {
     next('/login')
   } else {
