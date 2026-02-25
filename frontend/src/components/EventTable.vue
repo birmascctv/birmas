@@ -22,11 +22,29 @@
 
     <!-- Pagination -->
     <div class="flex justify-center gap-2 mt-3" v-if="totalPages > 1">
-      <button v-for="n in totalPages" :key="n"
-              @click="currentPage = n"
+      <!-- Prev -->
+      <button @click="currentPage = Math.max(1, currentPage - 1)"
               class="px-2 py-1 rounded border"
-              :class="currentPage === n ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700'">
-        {{ n }}
+              :disabled="currentPage === 1">
+        Prev
+      </button>
+
+      <!-- Page numbers with ellipsis -->
+      <template v-for="n in pagesToShow" :key="n">
+        <span v-if="n === '...'">...</span>
+        <button v-else
+                @click="currentPage = n"
+                class="px-2 py-1 rounded border"
+                :class="currentPage === n ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700'">
+          {{ n }}
+        </button>
+      </template>
+
+      <!-- Next -->
+      <button @click="currentPage = Math.min(totalPages, currentPage + 1)"
+              class="px-2 py-1 rounded border"
+              :disabled="currentPage === totalPages">
+        Next
       </button>
     </div>
   </div>
@@ -72,5 +90,17 @@ const totalPages = computed(() => Math.ceil(filteredEvents.value.length / pageSi
 const paginatedEvents = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredEvents.value.slice(start, start + pageSize)
+})
+
+const pagesToShow = computed(() => {
+  const pages = []
+  if (totalPages.value <= 5) {
+    for (let i = 1; i <= totalPages.value; i++) pages.push(i)
+  } else {
+    pages.push(1, 2)
+    pages.push('...')
+    pages.push(totalPages.value - 1, totalPages.value)
+  }
+  return pages
 })
 </script>

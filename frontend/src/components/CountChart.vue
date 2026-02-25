@@ -35,17 +35,19 @@ const loadData = async () => {
     const res = await API.get('/events', { params })
     events.value = res.data
 
-    // Apply same filtering logic as EventTable
     const now = Date.now()
-    let data = events.value
-    if (props.range === 'day') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 24*60*60*1000)
-    else if (props.range === 'week') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 7*24*60*60*1000)
-    else if (props.range === 'month') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 30*24*60*60*1000)
-    else if (props.range === '3months') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 90*24*60*60*1000)
-    else if (props.range === 'year') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 365*24*60*60*1000)
+    let filtered = events.value.filter(ev => {
+      const ts = new Date(ev.ts).getTime()
+      if (props.range === 'day') return ts >= now - 24*60*60*1000
+      if (props.range === 'week') return ts >= now - 7*24*60*60*1000
+      if (props.range === 'month') return ts >= now - 30*24*60*60*1000
+      if (props.range === '3months') return ts >= now - 90*24*60*60*1000
+      if (props.range === 'year') return ts >= now - 365*24*60*60*1000
+      return true
+    })
 
     const countsByLabel = {}
-    data.forEach(ev => {
+    filtered.forEach(ev => {
       countsByLabel[ev.label] = (countsByLabel[ev.label] || 0) + 1
     })
 
