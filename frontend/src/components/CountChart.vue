@@ -31,7 +31,6 @@ const loadData = async () => {
     const res = await API.get('/events', { params })
     let data = res.data
 
-    // Filter by range
     const now = Date.now()
     if (props.range === 'day') {
       const cutoff = now - 24*60*60*1000
@@ -41,6 +40,12 @@ const loadData = async () => {
       data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
     } else if (props.range === 'month') {
       const cutoff = now - 30*24*60*60*1000
+      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+    } else if (props.range === '3months') {
+      const cutoff = now - 90*24*60*60*1000
+      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+    } else if (props.range === 'year') {
+      const cutoff = now - 365*24*60*60*1000
       data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
     }
 
@@ -68,11 +73,11 @@ const loadData = async () => {
           responsive: true,
           plugins: {
             legend: { display: false },
-            tooltip: { bodyFont: { size: 14 }, titleFont: { size: 16 } }
+            tooltip: { bodyFont: { size: 13 }, titleFont: { size: 15 } }
           },
           scales: {
-            x: { ticks: { font: { size: 14 } } },
-            y: { ticks: { font: { size: 14 } } }
+            x: { ticks: { font: { size: 13 } } },
+            y: { ticks: { font: { size: 13 } } }
           }
         }
       })
