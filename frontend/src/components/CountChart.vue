@@ -19,7 +19,7 @@
     <div class="flex items-center justify-center">
       <canvas v-if="hasData"
               ref="chartRef"
-              :class="chartType === 'pie' ? 'scale-75' : 'w-full h-full'"></canvas>
+              :class="chartType === 'pie' ? 'scale-90' : 'w-full h-full'"></canvas>
       <div v-else class="text-center text-slate-400 py-10">No data available</div>
     </div>
   </div>
