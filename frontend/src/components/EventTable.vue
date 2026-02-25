@@ -1,6 +1,6 @@
 <template>
   <div class="flex-1">
-    <table v-if="filteredEvents.length" class="text-sm w-full border-collapse text-center">
+    <table v-if="paginatedEvents.length" class="text-sm w-full border-collapse text-center">
       <thead>
         <tr>
           <th class="border px-3 py-2 bg-slate-100">Time</th>
@@ -10,7 +10,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="ev in filteredEvents" :key="ev.ts">
+        <tr v-for="ev in paginatedEvents" :key="ev.ts">
           <td class="border px-3 py-2">{{ new Date(ev.ts).toLocaleString() }}</td>
           <td class="border px-3 py-2">{{ ev.camera_id }}</td>
           <td class="border px-3 py-2">{{ ev.label }}</td>
@@ -18,31 +18,38 @@
         </tr>
       </tbody>
     </table>
-    <div v-else class="text-center text-slate-400 py-10">
-      No data available
+    <div v-else class="text-center text-slate-400 py-10">No data available</div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center gap-2 mt-3" v-if="totalPages > 1">
+      <button v-for="n in totalPages" :key="n"
+              @click="currentPage = n"
+              class="px-2 py-1 rounded border"
+              :class="currentPage === n ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700'">
+        {{ n }}
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import API from '@/api.js'
 
-const props = defineProps({
-  filter: String,
-  camera: String
-})
-
+const props = defineProps({ filter: String, camera: String })
 const events = ref([])
+const currentPage = ref(1)
+const pageSize = 25
 
 const loadData = async () => {
   try {
     const params = props.camera === 'all' ? {} : { camera_id: props.camera }
     const res = await API.get('/events', { params })
     events.value = res.data
+    currentPage.value = 1
   } catch (err) {
     console.error("Error loading events:", err)
-    events.value = [] // fallback
+    events.value = []
   }
 }
 
@@ -52,24 +59,8 @@ watch(() => [props.filter, props.camera], loadData)
 const filteredEvents = computed(() => {
   let data = events.value
   const now = Date.now()
-
-  if (props.filter === 'day') {
-    const cutoff = now - 24*60*60*1000
-    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-  } else if (props.filter === 'week') {
-    const cutoff = now - 7*24*60*60*1000
-    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-  } else if (props.filter === 'month') {
-    const cutoff = now - 30*24*60*60*1000
-    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-  } else if (props.filter === '3months') {
-    const cutoff = now - 90*24*60*60*1000
-    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-  } else if (props.filter === 'year') {
-    const cutoff = now - 365*24*60*60*1000
-    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-  }
-
-  return data
-})
-</script>
+  if (props.filter === 'day') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 24*60*60*1000)
+  else if (props.filter === 'week') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 7*24*60*60*1000)
+  else if (props.filter === 'month') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 30*24*60*60*1000)
+  else if (props.filter === '3months') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 90*24*60*60*1000)
+  else if (props.filter === 'year')
