@@ -15,8 +15,13 @@
       </button>
     </div>
 
-    <canvas v-if="hasData" ref="chartRef"></canvas>
-    <div v-else class="text-center text-slate-400 py-10">No data available</div>
+    <!-- Chart canvas -->
+    <div class="flex items-center justify-center">
+      <canvas v-if="hasData"
+              ref="chartRef"
+              :class="chartType === 'pie' ? 'scale-90' : 'w-full h-full'"></canvas>
+      <div v-else class="text-center text-slate-400 py-10">No data available</div>
+    </div>
   </div>
 </template>
 
@@ -88,12 +93,11 @@ const loadData = async () => {
           },
           options: {
             responsive: true,
-            maintainAspectRatio: false,
-            radius: chartType.value === 'pie' ? '75%' : '100%'
+            maintainAspectRatio: false
           }
         })
       } else {
-        // Update instead of destroy/recreate
+        // ✅ Update instead of destroy/recreate
         chartInstance.config.type = chartType.value
         chartInstance.data.labels = labels
         chartInstance.data.datasets[0].data = counts
@@ -101,7 +105,6 @@ const loadData = async () => {
           chartType.value === 'bar'
             ? 'rgba(202, 138, 4, 0.7)'
             : ['#fbbf24','#f59e0b','#d97706','#b45309']
-        chartInstance.options.radius = chartType.value === 'pie' ? '75%' : '100%'
         chartInstance.update()
       }
     }
