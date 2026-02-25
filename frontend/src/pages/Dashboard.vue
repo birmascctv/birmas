@@ -3,11 +3,11 @@
 
     <!-- Header -->
     <header class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-slate-700 tracking-wide">
+      <h1 class="text-2xl font-bold text-amber-700 tracking-wide">
         Birmas
       </h1>
       <button @click="logout"
-              class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
+              class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium border border-amber-700">
         Logout
       </button>
     </header>
@@ -16,7 +16,7 @@
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5 items-stretch">
       <!-- Selected Camera -->
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <h2 class="text-lg font-semibold text-slate-700 mb-2">Selected Camera</h2>
+        <h2 class="text-lg font-semibold text-amber-700 mb-2">Selected Camera</h2>
         <select v-model="selectedCam" class="w-40 mb-2 h-7 px-2 py-0.5 border border-stone-300 rounded text-sm leading-tight bg-stone-50 text-slate-700">
           <option v-for="n in 9" :key="n" :value="`cam${n}`">Cam {{n}}</option>
         </select>
@@ -27,7 +27,7 @@
 
       <!-- Grid Cameras -->
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <h2 class="text-lg font-semibold text-slate-700 mb-2">All Cameras</h2>
+        <h2 class="text-lg font-semibold text-amber-700 mb-2">All Cameras</h2>
         <div class="grid grid-cols-3 gap-2 flex-1">
           <div v-for="n in 9" :key="n"
                class="relative aspect-video rounded-md overflow-hidden cursor-pointer flex items-center justify-center border border-stone-200"
@@ -53,7 +53,7 @@
         <option value="year">Last 1 Year</option>
       </select>
       <button @click="showAllCams = !showAllCams"
-              class="px-3 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200">
+              class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium border border-amber-700">
         {{ showAllCams ? 'Selected Cam Only' : 'All Cams' }}
       </button>
     </div>
@@ -62,14 +62,23 @@
     <section class="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
       <!-- Events Table -->
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <h2 class="text-lg font-semibold text-slate-700 mb-2">Recent Events</h2>
+        <h2 class="text-lg font-semibold text-amber-700 mb-2">Recent Events</h2>
         <EventTable :filter="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
       </div>
 
-      <!-- Chart -->
-      <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-stone-200">
-        <h2 class="text-lg font-semibold text-slate-700 mb-2">Product Count Statistics</h2>
-        <CountChart :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
+      <!-- Chart Section -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Bar Chart -->
+        <div class="h-64 bg-white rounded-lg shadow-sm p-4 flex flex-col border border-stone-200">
+          <h2 class="text-lg font-semibold text-amber-700 mb-2">Event Frequency</h2>
+          <CountChart type="bar" :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
+        </div>
+
+        <!-- Pie Chart -->
+        <div class="h-64 bg-white rounded-lg shadow-sm p-4 flex flex-col border border-stone-200 items-center justify-center">
+          <h2 class="text-lg font-semibold text-amber-700 mb-2">Event Distribution</h2>
+          <CountChart type="pie" :range="activeFilter" :camera="showAllCams ? 'all' : selectedCam" />
+        </div>
       </div>
     </section>
 
