@@ -7,22 +7,7 @@ const routes = [
   { path: '/dashboard', component: Dashboard }
 ]
 
-const router = createRouter({
+export default createRouter({
   history: createWebHistory(),
   routes
 })
-
-// Route guard: block dashboard if not logged in
-router.beforeEach((to, from, next) => {
-  const isAuth =
-    localStorage.getItem('auth') === 'true' ||
-    sessionStorage.getItem('auth') === 'true'
-
-  if (to.path.startsWith('/dashboard') && !isAuth) {
-    next('/login')
-  } else {
-    next()
-  }
-})
-
-export default router

@@ -1,8 +1,6 @@
 import { createApp } from 'vue'
-import App from './App.vue'       // Root component
-import router from './router'     // Import router.js
-import './style.css'              // Tailwind styles
+import App from './App.vue'
+import router from './router'
+import './style.css'
 
-const app = createApp(App)
-app.use(router)                   // Register router
-app.mount('#app')
+createApp(App).use(router).mount('#app')
