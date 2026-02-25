@@ -29,7 +29,7 @@
         Prev
       </button>
 
-      <!-- Page numbers with ellipsis -->
+      <!-- Dynamic pages -->
       <template v-for="n in pagesToShow" :key="n">
         <span v-if="n === '...'">...</span>
         <button v-else
@@ -97,9 +97,13 @@ const pagesToShow = computed(() => {
   if (totalPages.value <= 5) {
     for (let i = 1; i <= totalPages.value; i++) pages.push(i)
   } else {
-    pages.push(1, 2)
-    pages.push('...')
-    pages.push(totalPages.value - 1, totalPages.value)
+    if (currentPage.value <= 3) {
+      pages.push(1, 2, 3, '...', totalPages.value)
+    } else if (currentPage.value >= totalPages.value - 2) {
+      pages.push(1, '...', totalPages.value - 2, totalPages.value - 1, totalPages.value)
+    } else {
+      pages.push(1, '...', currentPage.value - 1, currentPage.value, currentPage.value + 1, '...', totalPages.value)
+    }
   }
   return pages
 })
