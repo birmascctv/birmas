@@ -7,6 +7,13 @@
                class="w-full mb-3 h-8 px-2 py-1 border rounded text-sm leading-tight bg-stone-50 text-slate-700" />
         <input v-model="password" type="password" placeholder="Password"
                class="w-full mb-3 h-8 px-2 py-1 border rounded text-sm leading-tight bg-stone-50 text-slate-700" />
+
+        <!-- Remember Me -->
+        <label class="flex items-center gap-2 mb-3 text-sm text-slate-600">
+          <input type="checkbox" v-model="rememberMe" />
+          Remember me
+        </label>
+
         <button type="submit"
                 class="w-full bg-amber-600 text-white py-2 rounded hover:bg-amber-700">
           Login
@@ -22,12 +29,16 @@ import { useRouter } from 'vue-router'
 
 const username = ref('')
 const password = ref('')
+const rememberMe = ref(false)
 const router = useRouter()
 
 const login = () => {
-  // Simple hardcoded authentication for demo
   if (username.value === 'admin' && password.value === 'password') {
-    localStorage.setItem('auth', 'true')
+    if (rememberMe.value) {
+      localStorage.setItem('auth', 'true')   // persists across sessions
+    } else {
+      sessionStorage.setItem('auth', 'true') // clears when browser closes
+    }
     router.push('/dashboard')
   } else {
     alert('Invalid credentials')
