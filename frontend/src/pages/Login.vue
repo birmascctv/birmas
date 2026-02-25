@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-stone-100">
     <div class="bg-white p-6 rounded-lg shadow-sm w-80 border border-stone-200">
-      <h2 class="text-lg font-semibold text-slate-700 mb-4">Login</h2>
+      <h2 class="text-lg font-semibold text-amber-700 mb-4">Login</h2>
       <form @submit.prevent="login">
         <input v-model="username" type="text" placeholder="Username"
                class="w-full mb-3 h-8 px-2 py-1 border rounded text-sm leading-tight bg-stone-50 text-slate-700" />
@@ -33,11 +33,21 @@ const rememberMe = ref(false)
 const router = useRouter()
 
 const login = () => {
-  if (username.value === 'admin' && password.value === 'password') {
+  // Simple test user list
+  const users = [
+    { username: 'admin', password: 'password' },
+    { username: 'eva', password: 'secret123' }
+  ]
+
+  const match = users.find(
+    u => u.username === username.value && u.password === password.value
+  )
+
+  if (match) {
     if (rememberMe.value) {
-      localStorage.setItem('auth', 'true')   // persists across sessions
+      localStorage.setItem('auth', 'true')
     } else {
-      sessionStorage.setItem('auth', 'true') // clears when browser closes
+      sessionStorage.setItem('auth', 'true')
     }
     router.push('/dashboard')
   } else {
