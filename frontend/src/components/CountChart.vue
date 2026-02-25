@@ -1,11 +1,27 @@
 <template>
   <div class="flex-1">
     <div class="flex gap-2 mb-2">
-      <button @click="chartType = 'bar'" :class="chartType==='bar' ? 'bg-amber-600 text-white px-3 py-1 rounded' : 'bg-stone-200 px-3 py-1 rounded'">Bar</button>
-      <button @click="chartType = 'pie'" :class="chartType==='pie' ? 'bg-amber-600 text-white px-3 py-1 rounded' : 'bg-stone-200 px-3 py-1 rounded'">Pie</button>
+      <button @click="chartType = 'bar'"
+              :class="chartType==='bar'
+                ? 'bg-amber-600 text-white px-3 py-1 rounded'
+                : 'bg-stone-200 px-3 py-1 rounded'">
+        Bar
+      </button>
+      <button @click="chartType = 'pie'"
+              :class="chartType==='pie'
+                ? 'bg-amber-600 text-white px-3 py-1 rounded'
+                : 'bg-stone-200 px-3 py-1 rounded'">
+        Pie
+      </button>
     </div>
-    <canvas v-if="hasData" ref="chartRef"></canvas>
-    <div v-else class="text-center text-slate-400 py-10">No data available</div>
+
+    <!-- Chart canvas -->
+    <div class="flex items-center justify-center">
+      <canvas v-if="hasData"
+              ref="chartRef"
+              :class="chartType === 'pie' ? 'scale-75' : 'w-full h-full'"></canvas>
+      <div v-else class="text-center text-slate-400 py-10">No data available</div>
+    </div>
   </div>
 </template>
 
@@ -75,7 +91,10 @@ const loadData = async () => {
               : ['#fbbf24','#f59e0b','#d97706','#b45309'] // pie slices
           }]
         },
-        options: { responsive: true }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
       })
     }
   } catch (err) {
