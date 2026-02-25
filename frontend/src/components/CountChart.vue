@@ -51,13 +51,15 @@ const loadData = async () => {
     hasData.value = labels.length > 0
 
     if (chartRef.value && hasData.value) {
-      // generate dynamic red shades for pie
+      // dynamic red shades for pie
       const min = Math.min(...counts)
       const max = Math.max(...counts)
       const colors = counts.map(val => {
         const ratio = (val - min) / (max - min || 1)
-        // interpolate light red → dark red
-        return `hsl(0, 80%, ${70 - ratio*40}%)`
+        // light red (#fecaca) → dark red (#b91c1c)
+        return ratio === 0
+          ? '#fecaca'
+          : `hsl(0, 70%, ${70 - ratio*40}%)`
       })
 
       if (!chartInstance) {
