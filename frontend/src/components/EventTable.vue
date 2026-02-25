@@ -1,5 +1,5 @@
 <template>
-  <table class="text-lg w-full border-collapse text-center">
+  <table class="text-base w-full border-collapse text-center">
     <thead>
       <tr>
         <th class="border px-3 py-2 bg-slate-100">Time</th>
@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import API from '@/api.js'
 
 const props = defineProps({
@@ -30,7 +30,7 @@ const props = defineProps({
 
 const events = ref([])
 
-onMounted(async () => {
+const loadData = async () => {
   try {
     const params = props.camera === 'all' ? {} : { camera_id: props.camera }
     const res = await API.get('/events', { params })
@@ -38,20 +38,32 @@ onMounted(async () => {
   } catch (err) {
     console.error("Error loading events:", err)
   }
-})
+}
+
+onMounted(loadData)
+watch(() => [props.filter, props.camera], loadData)
 
 const filteredEvents = computed(() => {
-  if (props.filter === 'last25') return events.value.slice(-25)
-  if (props.filter === 'last50') return events.value.slice(-50)
-  if (props.filter === 'hour') {
-    const cutoff = Date.now() - 60*60*1000
-    return events.value.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  let data = events.value
+  const now = Date.now()
+
+  if (props.filter === 'day') {
+    const cutoff = now - 24*60*60*1000
+    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  } else if (props.filter === 'week') {
+    const cutoff = now - 7*24*60*60*1000
+    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  } else if (props.filter === 'month') {
+    const cutoff = now - 30*24*60*60*1000
+    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  } else if (props.filter === '3months') {
+    const cutoff = now - 90*24*60*60*1000
+    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
+  } else if (props.filter === 'year') {
+    const cutoff = now - 365*24*60*60*1000
+    data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
   }
-  if (props.filter === 'today') {
-    const today = new Date().toDateString()
-    const todayEvents = events.value.filter(ev => new Date(ev.ts).toDateString() === today)
-    return todayEvents.length > 50 ? todayEvents.filter((_, i) => i % 50 === 0) : todayEvents
-  }
-  return events.value
+
+  return data
 })
 </script>
