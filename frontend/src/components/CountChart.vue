@@ -22,38 +22,27 @@ import API from '@/api.js'
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-const props = defineProps({
-  range: String,
-  camera: String
-})
+const props = defineProps({ range: String, camera: String })
 
 const chartRef = ref(null)
 let chartInstance = null
 const hasData = ref(false)
+const events = ref([])
 
 const loadData = async () => {
   try {
     const params = props.camera === 'all' ? {} : { camera_id: props.camera }
     const res = await API.get('/events', { params })
-    let data = res.data
+    events.value = res.data
 
+    // Apply same filtering logic as EventTable
     const now = Date.now()
-    if (props.range === 'day') {
-      const cutoff = now - 24*60*60*1000
-      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-    } else if (props.range === 'week') {
-      const cutoff = now - 7*24*60*60*1000
-      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-    } else if (props.range === 'month') {
-      const cutoff = now - 30*24*60*60*1000
-      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-    } else if (props.range === '3months') {
-      const cutoff = now - 90*24*60*60*1000
-      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-    } else if (props.range === 'year') {
-      const cutoff = now - 365*24*60*60*1000
-      data = data.filter(ev => new Date(ev.ts).getTime() >= cutoff)
-    }
+    let data = events.value
+    if (props.range === 'day') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 24*60*60*1000)
+    else if (props.range === 'week') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 7*24*60*60*1000)
+    else if (props.range === 'month') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 30*24*60*60*1000)
+    else if (props.range === '3months') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 90*24*60*60*1000)
+    else if (props.range === 'year') data = data.filter(ev => new Date(ev.ts).getTime() >= now - 365*24*60*60*1000)
 
     const countsByLabel = {}
     data.forEach(ev => {
@@ -74,7 +63,7 @@ const loadData = async () => {
           datasets: [{
             label: 'Detections per Label',
             data: counts,
-            backgroundColor: 'rgba(79, 70, 229, 0.7)' // Indigo
+            backgroundColor: 'rgba(79, 70, 229, 0.7)'
           }]
         },
         options: {
