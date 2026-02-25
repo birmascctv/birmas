@@ -1,5 +1,10 @@
 <template>
-  <canvas ref="chartRef"></canvas>
+  <div class="flex-1">
+    <canvas v-if="hasData" ref="chartRef"></canvas>
+    <div v-else class="text-center text-slate-400 py-10">
+      No data available
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -24,6 +29,7 @@ const props = defineProps({
 
 const chartRef = ref(null)
 let chartInstance = null
+const hasData = ref(false)
 
 const loadData = async () => {
   try {
@@ -57,8 +63,10 @@ const loadData = async () => {
     const labels = Object.keys(countsByLabel)
     const counts = Object.values(countsByLabel)
 
+    hasData.value = labels.length > 0
+
     if (chartInstance) chartInstance.destroy()
-    if (chartRef.value) {
+    if (chartRef.value && hasData.value) {
       chartInstance = new Chart(chartRef.value, {
         type: 'bar',
         data: {
@@ -73,17 +81,18 @@ const loadData = async () => {
           responsive: true,
           plugins: {
             legend: { display: false },
-            tooltip: { bodyFont: { size: 13 }, titleFont: { size: 15 } }
+            tooltip: { bodyFont: { size: 12 }, titleFont: { size: 14 } }
           },
           scales: {
-            x: { ticks: { font: { size: 13 } } },
-            y: { ticks: { font: { size: 13 } } }
+            x: { ticks: { font: { size: 12 } } },
+            y: { ticks: { font: { size: 12 } } }
           }
         }
       })
     }
   } catch (err) {
     console.error("Error loading chart data:", err)
+    hasData.value = false
   }
 }
 
