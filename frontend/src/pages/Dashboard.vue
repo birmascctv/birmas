@@ -9,14 +9,15 @@
     </header>
 
     <!-- Camera Section -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-stretch">
       <!-- Selected Camera -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <h2 class="text-xl font-bold text-slate-800 mb-3">Selected Camera</h2>
-        <select v-model="selectedCam" class="w-32 mb-3 p-2 border rounded text-sm">
+        <!-- Shorter height dropdown -->
+        <select v-model="selectedCam" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
           <option v-for="n in 9" :key="n" :value="`cam${n}`">Cam {{n}}</option>
         </select>
-        <div class="relative aspect-video bg-black rounded-lg overflow-hidden">
+        <div class="relative aspect-video bg-black rounded-lg overflow-hidden flex-1">
           <LivePlayer :src="`/stream/${selectedCam}/index.m3u8`" />
         </div>
       </div>
@@ -24,7 +25,7 @@
       <!-- Grid Cameras -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <h2 class="text-xl font-bold text-slate-800 mb-3">All Cameras</h2>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-3 gap-2 flex-1">
           <div v-for="n in 9" :key="n"
                class="relative aspect-video rounded overflow-hidden cursor-pointer flex items-center justify-center"
                :class="selectedCam === `cam${n}` ? 'bg-indigo-200 text-indigo-800' : 'bg-gray-200 text-slate-500'"
@@ -40,7 +41,7 @@
     </section>
 
     <!-- Bottom Section -->
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
       <!-- Events Table -->
       <div class="bg-white rounded-xl shadow p-5 flex flex-col h-full">
         <div class="flex items-center justify-between mb-3">
@@ -51,8 +52,8 @@
           </button>
         </div>
 
-        <!-- Unified Dropdown Filter -->
-        <select v-model="activeFilter" class="w-32 mb-3 p-2 border rounded text-sm">
+        <!-- Shorter height dropdown -->
+        <select v-model="activeFilter" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
           <option value="day">Last 1 Day</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
@@ -73,8 +74,8 @@
           </button>
         </div>
 
-        <!-- Unified Dropdown Filter -->
-        <select v-model="chartRange" class="w-32 mb-3 p-2 border rounded text-sm">
+        <!-- Shorter height dropdown -->
+        <select v-model="chartRange" class="w-40 mb-3 h-8 p-1 border rounded text-sm">
           <option value="day">Last 1 Day</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
