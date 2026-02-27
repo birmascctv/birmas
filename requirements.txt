@@ -12,4 +12,3 @@ onnxruntime
 scipy
 lap
 cython
-yolox
