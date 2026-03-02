@@ -1,6 +1,8 @@
 <template>
   <div class="flex-1">
-    <table v-if="paginatedEvents.length" class="text-sm w-full border-collapse text-center">
+    <!-- Add a null check so Vue doesn't crash -->
+    <table v-if="paginatedEvents && paginatedEvents.length"
+           class="text-sm w-full border-collapse text-center">
       <thead>
         <tr>
           <th class="border px-3 py-2 bg-slate-100">Time</th>
@@ -11,7 +13,6 @@
       </thead>
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.ts">
-          <!-- First column: lighter text for readability -->
           <td class="border px-3 py-2 text-gray-700">{{ new Date(ev.ts).toLocaleString() }}</td>
           <td class="border px-3 py-2">{{ ev.camera_id }}</td>
           <td class="border px-3 py-2">{{ ev.label }}</td>
@@ -19,9 +20,10 @@
         </tr>
       </tbody>
     </table>
+
     <div v-else class="text-center text-slate-400 py-10">No data available</div>
 
-    <!-- Pagination (unchanged) -->
+    <!-- Pagination stays the same -->
     <div class="flex justify-center gap-2 mt-3" v-if="totalPages > 1">
       <button @click="currentPage = Math.max(1, currentPage - 1)"
               class="px-2 py-1 rounded border"
@@ -34,7 +36,7 @@
         <button v-else
                 @click="currentPage = n"
                 class="px-2 py-1 rounded border"
-                :class="currentPage === n ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700'">
+                :class="currentPage === n ? 'bg-red-600 text-white' : 'bg-white text-slate-700'">
           {{ n }}
         </button>
       </template>
