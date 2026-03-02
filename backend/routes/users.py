@@ -1,0 +1,38 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from db import SessionLocal
+from models import User
+from schemas import UserCreate, UserLogin, UserOut
+from auth import hash_password, verify_password
+import logging
+
+router = APIRouter()
+logger = logging.getLogger("uvicorn")
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@router.post("/register", response_model=UserOut)
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == user.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    new_user = User(username=user.username, password_hash=hash_password(user.password))
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    logger.info(f"New user registered: {user.username} (id={new_user.id})")
+    return {"user_id": new_user.id, "username": new_user.username}
+
+@router.post("/login")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if not db_user or not verify_password(user.password, db_user.password_hash):
+        logger.warning(f"Failed login attempt for {user.username}")
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    logger.info(f"User {user.username} logged in successfully (id={db_user.id})")
+    return {"user_id": db_user.id, "username": db_user.username, "access_token": "fake-jwt"}
