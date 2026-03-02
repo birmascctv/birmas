@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from routes.events import router as event_router
+from routes.users import router as user_router
 import json
 
 class ConnectionManager:
@@ -37,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(event_router, prefix="/api")
+app.include_router(user_router, prefix="/api/users")
 
 @app.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket):
