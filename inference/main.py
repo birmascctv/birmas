@@ -7,7 +7,7 @@ print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
 # ---------------- CONFIG ----------------
 STREAM_URL = os.getenv("STREAM_URL", "rtmp://localhost:1935/cam1")
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://100.87.93.95:8000/api/events")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "http://100.116.54.78:8000/api/events")
 MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
