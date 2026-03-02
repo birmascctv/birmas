@@ -49,3 +49,32 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import API from '../api'   // use your api.js wrapper
+
+const events = ref([])
+const currentPage = ref(1)
+const pageSize = 10
+
+// Fetch events from backend
+async function loadEvents() {
+  try {
+    const res = await API.get('/events?camera_id=cam1')
+    events.value = res.data
+  } catch (err) {
+    console.error('Error loading events:', err)
+  }
+}
+loadEvents()
+
+// Pagination
+const totalPages = computed(() =>
+  Math.ceil(events.value.length / pageSize)
+)
+
+const paginatedEvents = computed(() =>
+  events.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize)
+)
+</script>
