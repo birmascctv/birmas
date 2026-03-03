@@ -3,14 +3,11 @@ from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import User
 from backend.schemas import UserCreate, UserLogin, UserOut
-from passlib.context import CryptContext
+import bcrypt
 import logging
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
-
-# Use Passlib CryptContext with bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_db():
     db = SessionLocal()
@@ -25,7 +22,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    hashed_pw = pwd_context.hash(user.password)
+    # bcrypt requires bytes, truncate if longer than 72
+    raw_pw = user.password.encode("utf-8")[:72]
+    hashed_pw = bcrypt.hashpw(raw_pw, bcrypt.gensalt()).decode("utf-8")
+
     new_user = User(username=user.username, password_hash=hashed_pw)
     db.add(new_user)
     db.commit()
@@ -36,7 +36,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=UserOut)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
-    if not db_user or not pwd_context.verify(user.password, db_user.password_hash):
+    if not db_user:
+        logger.warning(f"Failed login attempt for {user.username}")
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+
+    raw_pw = user.password.encode("utf-8")[:72]
+    if not bcrypt.checkpw(raw_pw, db_user.password_hash.encode("utf-8")):
         logger.warning(f"Failed login attempt for {user.username}")
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
