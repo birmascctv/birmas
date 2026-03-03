@@ -15,7 +15,7 @@ class UserLogin(UserBase):
     password: str
 
 class UserOut(UserBase):
-    user_id: int
+    id: int
 
     class Config:
         from_attributes = True
