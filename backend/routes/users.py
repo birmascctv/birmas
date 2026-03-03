@@ -21,7 +21,11 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == user.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
-
+   
+    # bcrypt requires bytes, and passwords must be <=72 bytes
+    raw_pw = user.password.encode("utf-8")[:72] # truncate if longer
+    hashed_pw = bcrypt.hashpw(raw_pw, bcrypt.gensalt()).decode("utf-8")
+    
     new_user = User(username=user.username, password_hash=hash_password(user.password))
     db.add(new_user)
     db.commit()
