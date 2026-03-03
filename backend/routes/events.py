@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
-from schemas import Event
-from db import get_connection
+from backend.schemas import Event
+from backend.db import get_connection
 
 router = APIRouter()
 
