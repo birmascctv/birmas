@@ -9,6 +9,7 @@ import logging
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
 
+# Passlib CryptContext handles bcrypt safely
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_db():
@@ -24,6 +25,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
 
+    # Hash password safely with Passlib
     hashed_pw = pwd_context.hash(user.password)
     new_user = User(username=user.username, password_hash=hashed_pw)
     db.add(new_user)
