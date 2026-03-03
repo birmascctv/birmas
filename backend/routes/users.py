@@ -5,6 +5,7 @@ from backend.models import User
 from backend.schemas import UserCreate, UserLogin, UserOut
 from backend.auth import hash_password, verify_password
 import logging
+import bcrypt
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
