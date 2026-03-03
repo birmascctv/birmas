@@ -1,44 +1,41 @@
-from fastapi import APIRouter, Request, HTTPException
-from backend.schemas import Event
-from backend.db import get_connection
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+from backend.db import SessionLocal
+from backend.models import Event
+from backend.schemas import EventCreate, EventOut
 
 router = APIRouter()
 
-@router.post("/events")
-async def post_event(ev: Event, request: Request):
-    # 1. Save to Database
-    conn = get_connection()
+def get_db():
+    db = SessionLocal()
     try:
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO events(camera_id, ts, label, confidence, bbox) VALUES (%s, %s, %s, %s, %s)",
-                (ev.camera_id, ev.ts, ev.label, ev.confidence, ev.bbox)
-            )
-        
-        # 2. Broadcast to all WebSocket clients
-        # We access the manager we stored in app.state
+        yield db
+    finally:
+        db.close()
+
+@router.post("/events", response_model=EventOut)
+async def post_event(ev: EventCreate, request: Request, db: Session = Depends(get_db)):
+    try:
+        new_event = Event(
+            camera_id=ev.camera_id,
+            ts=ev.ts,
+            label=ev.label,
+            confidence=ev.confidence,
+            bbox=ev.bbox
+        )
+        db.add(new_event)
+        db.commit()
+        db.refresh(new_event)
+
+        # Broadcast to WebSocket clients
         manager = request.app.state.manager
         await manager.broadcast(ev.model_dump())
-        
-        return {"ok": True}
+
+        return new_event
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
 
-@router.get("/events")
-async def get_events(camera_id: str):
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT camera_id, ts, label, confidence, bbox FROM events WHERE camera_id=%s ORDER BY ts DESC LIMIT 100",
-                (camera_id,)
-            )
-            rows = cur.fetchall()
-        return [
-            {"camera_id": r[0], "ts": r[1].isoformat(), "label": r[2], "confidence": r[3], "bbox": r[4]}
-            for r in rows
-        ]
-    finally:
-        conn.close()
+@router.get("/events", response_model=list[EventOut])
+async def get_events(camera_id: str, db: Session = Depends(get_db)):
+    events = db.query(Event).filter(Event.camera_id == camera_id).order_by(Event.ts.desc()).limit(100).all()
+    return events
