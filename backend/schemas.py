@@ -1,22 +1,40 @@
 from pydantic import BaseModel
-from typing import List
+from datetime import datetime
+from typing import Optional, List
 
-class Event(BaseModel):
+# -------------------
+# User Schemas
+# -------------------
+class UserBase(BaseModel):
+    username: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserLogin(UserBase):
+    password: str
+
+class UserOut(UserBase):
+    user_id: int
+
+    class Config:
+        orm_mode = True
+
+# -------------------
+# Event Schemas
+# -------------------
+class EventBase(BaseModel):
     camera_id: str
-    ts: str
+    ts: datetime
     label: str
     confidence: float
-    bbox: List[float]
-    
-class UserCreate(BaseModel):
-    username: str
-    password: str
+    bbox: str
 
-class UserLogin(BaseModel):
-    username: str
-    password: str
+class EventCreate(EventBase):
+    pass
 
-class UserOut(BaseModel):
-    user_id: int
-    username: str
+class EventOut(EventBase):
+    id: int
 
+    class Config:
+        orm_mode = True
