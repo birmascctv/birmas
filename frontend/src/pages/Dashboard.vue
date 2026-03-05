@@ -19,9 +19,12 @@
         <h2 class="text-lg font-semibold text-red-600 mb-2">Selected Camera</h2>
         <select v-model="selectedCam"
                 class="w-40 mb-2 h-7 px-2 py-0.5 border border-gray-300 rounded text-sm leading-tight bg-gray-100 text-gray-800">
-          <option v-for="n in 9" :key="n" :value="`cam${n}`">Cam {{n}}</option>
+          <option v-for="cam in cameras" :key="cam.id" :value="cam.id">
+            {{ cam.name }}
+          </option>
         </select>
         <div class="relative aspect-video bg-black rounded-md overflow-hidden flex-1">
+          <!-- Live feed only for selected camera -->
           <LivePlayer :src="`/stream/${selectedCam}/index.m3u8`" />
         </div>
       </div>
@@ -30,15 +33,16 @@
       <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col h-full border border-gray-200">
         <h2 class="text-lg font-semibold text-red-600 mb-2">All Cameras</h2>
         <div class="grid grid-cols-3 gap-2 flex-1">
-          <div v-for="n in 9" :key="n"
+          <div v-for="cam in cameras" :key="cam.id"
                class="relative aspect-video rounded-md overflow-hidden cursor-pointer flex items-center justify-center border border-gray-300"
-               :class="selectedCam === `cam${n}` ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'"
-               @click="selectedCam = `cam${n}`">
+               :class="selectedCam === cam.id ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'"
+               @click="selectedCam = cam.id">
             <span class="absolute bottom-2 left-2 text-xs font-medium px-2 py-0.5 rounded"
-                  :class="selectedCam === `cam${n}` ? 'bg-red-600 text-white' : 'bg-gray-400 text-white'">
-              Cam {{n}}
+                  :class="selectedCam === cam.id ? 'bg-red-600 text-white' : 'bg-gray-400 text-white'">
+              {{ cam.name }}
             </span>
-            <LivePlayer v-if="selectedCam === `cam${n}`" :src="`/stream/cam${n}/index.m3u8`" />
+            <!-- Static photo instead of live feed -->
+            <img :src="cam.thumbnail" alt="Camera thumbnail" class="w-full h-full object-cover" />
           </div>
         </div>
       </div>
@@ -84,6 +88,13 @@ import { useRouter } from 'vue-router'
 import LivePlayer from '../components/LivePlayer.vue'
 import CountChart from '../components/CountChart.vue'
 import EventTable from '../components/EventTable.vue'
+
+const cameras = [
+  { id: 'cam1', name: 'Tebet', thumbnail: '/images/tebet.jpg' },
+  // Add more cameras later like:
+  // { id: 'cam2', name: 'Kemang', thumbnail: '/images/kemang.jpg' },
+  // { id: 'cam3', name: 'Senayan', thumbnail: '/images/senayan.jpg' },
+]
 
 const selectedCam = ref('cam1')
 const activeFilter = ref('day')
