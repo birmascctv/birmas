@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import Event
 from backend.schemas import EventCreate, EventOut
+from datetime import datetime
 
 router = APIRouter()
 
@@ -18,10 +19,10 @@ async def post_event(ev: EventCreate, request: Request, db: Session = Depends(ge
     try:
         new_event = Event(
             camera_id=ev.camera_id,
-            ts=ev.ts,
-            label=ev.label,
-            confidence=ev.confidence,
-            bbox=ev.bbox
+            ts=ev.ts if ev.ts else datetime.utcnow(),  # default to now if not provided
+            product_brand=ev.product_brand,
+            product_name=ev.product_name,
+            confidence=ev.confidence
         )
         db.add(new_event)
         db.commit()
@@ -37,5 +38,14 @@ async def post_event(ev: EventCreate, request: Request, db: Session = Depends(ge
 
 @router.get("/events", response_model=list[EventOut])
 async def get_events(camera_id: str, db: Session = Depends(get_db)):
-    events = db.query(Event).filter(Event.camera_id == camera_id).order_by(Event.ts.desc()).limit(100).all()
-    return events
+    try:
+        events = (
+            db.query(Event)
+            .filter(Event.camera_id == camera_id)
+            .order_by(Event.ts.desc())
+            .limit(100)
+            .all()
+        )
+        return events
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
