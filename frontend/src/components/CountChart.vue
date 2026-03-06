@@ -73,10 +73,10 @@ async function loadChartData() {
 
     const ctx = document.getElementById('countChart').getContext('2d')
 
-    // Create gradient fill
-    const gradient = ctx.createLinearGradient(0, 0, 800, 0)
-    gradient.addColorStop(0, 'rgba(255, 99, 132, 0.8)')
-    gradient.addColorStop(1, 'rgba(220, 38, 38, 0.8)')
+    // Gradient: dark red → light red
+    const gradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0)
+    gradient.addColorStop(0, 'rgba(139, 0, 0, 0.9)')   // dark red
+    gradient.addColorStop(1, 'rgba(255, 99, 132, 0.7)') // light red
 
     chartInstance.value = new Chart(ctx, {
       type: 'bar',
@@ -85,10 +85,12 @@ async function loadChartData() {
         datasets: [{
           label: 'Detections',
           data,
-          backgroundColor: gradient, // red gradient
-          borderColor: 'rgba(220, 38, 38, 1)',
+          backgroundColor: gradient,
+          borderColor: 'rgba(139, 0, 0, 1)',
           borderWidth: 1,
-          barThickness: 28
+          barThickness: 'flex', // let Chart.js auto-fit bars
+          categoryPercentage: 1.0, // remove gaps between bars
+          barPercentage: 1.0       // bars connected
         }]
       },
       options: {
