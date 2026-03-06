@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-96"> <!-- taller container for readability -->
+  <div class="w-full h-[600px] overflow-y-auto"> <!-- taller container with scroll -->
     <canvas id="countChart"></canvas>
   </div>
 </template>
@@ -28,15 +28,17 @@ async function loadChartData() {
       counts[label] = (counts[label] || 0) + 1
     })
 
-    const labels = Object.keys(counts)
-    const data = Object.values(counts)
+    // Sort by count descending
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    const labels = sorted.map(([label]) => label)
+    const data = sorted.map(([_, count]) => count)
 
     // Destroy old chart if exists
     if (chartInstance.value) {
       chartInstance.value.destroy()
     }
 
-    // Create horizontal bar chart
+    // Create horizontal bar chart with thicker bars
     const ctx = document.getElementById('countChart').getContext('2d')
     chartInstance.value = new Chart(ctx, {
       type: 'bar',
@@ -47,17 +49,26 @@ async function loadChartData() {
           data,
           backgroundColor: 'rgba(220, 38, 38, 0.7)', // red tone
           borderColor: 'rgba(220, 38, 38, 1)',
-          borderWidth: 1
+          borderWidth: 1,
+          barThickness: 24 // make bars thicker
         }]
       },
       options: {
         indexAxis: 'y', // horizontal bars
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false }
         },
         scales: {
-          x: { beginAtZero: true }
+          x: { beginAtZero: true },
+          y: {
+            ticks: {
+              autoSkip: false, // show all labels
+              maxRotation: 0,
+              minRotation: 0
+            }
+          }
         }
       }
     })
