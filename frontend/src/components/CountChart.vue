@@ -4,7 +4,7 @@
     <div class="flex gap-2 mb-4">
       <button @click="mode = 'all'"
               :class="mode === 'all' ? 'bg-red-600 text-white px-3 py-1 rounded' : 'bg-gray-200 px-3 py-1 rounded'">
-        All Products
+        All Products (Treemap)
       </button>
       <button @click="mode = 'top20'"
               :class="mode === 'top20' ? 'bg-red-600 text-white px-3 py-1 rounded' : 'bg-gray-200 px-3 py-1 rounded'">
@@ -16,8 +16,8 @@
       </button>
     </div>
 
-    <!-- Chart container with dynamic height -->
-    <div :style="{ height: chartHeight + 'px' }" class="w-full overflow-y-auto">
+    <!-- Chart container -->
+    <div class="w-full h-[600px]">
       <canvas id="countChart"></canvas>
     </div>
   </div>
@@ -26,13 +26,13 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import TreemapController from 'chartjs-chart-treemap' // install chartjs-chart-treemap
 import API from '../api'
 
-Chart.register(...registerables)
+Chart.register(...registerables, TreemapController)
 
 const chartInstance = ref(null)
 const mode = ref('all') // default mode
-const chartHeight = ref(600) // will be adjusted dynamically
 
 async function loadChartData() {
   try {
@@ -67,61 +67,89 @@ async function loadChartData() {
     const labels = sorted.map(([label]) => label)
     const data = sorted.map(([_, count]) => count)
 
-    // Auto-adjust chart height: ~25px per bar
-    chartHeight.value = labels.length * 25
-
-    // Destroy old chart if exists
     if (chartInstance.value) {
       chartInstance.value.destroy()
     }
 
     const ctx = document.getElementById('countChart').getContext('2d')
 
-    // Generate gradient colors per bar (bright dashboard red → lighter red)
-    const backgroundColors = labels.map((_, i) => {
-      const step = i / labels.length
-      // Start from dashboard red (220,38,38) and lighten gradually
-      const r = 220 + Math.round(35 * step)   // 220 → 255
-      const g = 38  + Math.round(61 * step)   // 38 → 99
-      const b = 38  + Math.round(94 * step)   // 38 → 132
-      return `rgba(${r}, ${g}, ${b}, 0.9)`
-    })
-
-    const borderColors = backgroundColors.map(c => c.replace('0.9', '1'))
-
-    chartInstance.value = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Detections',
-          data,
-          backgroundColor: backgroundColors,
-          borderColor: borderColors,
-          borderWidth: 1,
-          barThickness: 'flex',     // thin bars, auto-fit
-          categoryPercentage: 1.0,  // no spacing
-          barPercentage: 1.0        // bars connected
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
+    if (mode.value === 'all') {
+      // Treemap view for all products
+      chartInstance.value = new Chart(ctx, {
+        type: 'treemap',
+        data: {
+          datasets: [{
+            tree: sorted.map(([label, count]) => ({ label, value: count })),
+            key: 'value',
+            groups: ['label'],
+            backgroundColor(ctx) {
+              // Gradient red by order
+              const i = ctx.index
+              const step = i / labels.length
+              const r = 220 + Math.round(35 * step)
+              const g = 38 + Math.round(61 * step)
+              const b = 38 + Math.round(94 * step)
+              return `rgba(${r}, ${g}, ${b}, 0.9)`
+            },
+            labels: {
+              display: true,
+              formatter(ctx) {
+                return ctx.raw.label
+              }
+            }
+          }]
         },
-        scales: {
-          x: { beginAtZero: true },
-          y: {
-            ticks: {
-              font: { size: 12 },
-              autoSkip: false
+        options: {
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.raw.label}: ${ctx.raw.value}`
+              }
             }
           }
         }
-      }
-    })
+      })
+    } else {
+      // Bar chart for Top 20 or Group by Brand
+      chartInstance.value = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Detections',
+            data,
+            backgroundColor: labels.map((_, i) => {
+              const step = i / labels.length
+              const r = 220 + Math.round(35 * step)
+              const g = 38 + Math.round(61 * step)
+              const b = 38 + Math.round(94 * step)
+              return `rgba(${r}, ${g}, ${b}, 0.9)`
+            }),
+            borderWidth: 1,
+            categoryPercentage: 1.0,
+            barPercentage: 1.0
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.raw} detections`
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true },
+            y: { ticks: { font: { size: 12 }, autoSkip: false } }
+          }
+        }
+      })
+    }
   } catch (err) {
     console.error('Error loading chart data:', err)
   }
