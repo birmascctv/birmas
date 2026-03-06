@@ -32,10 +32,11 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import 'chartjs-chart-treemap'   // ensure plugin is installed: npm install chartjs-chart-treemap
+import { TreemapController, TreemapElement } from 'chartjs-chart-treemap' // ✅ explicit import
 import API from '../api'
 
-Chart.register(...registerables)
+// Register Chart.js core + treemap plugin
+Chart.register(...registerables, TreemapController, TreemapElement)
 
 const chartInstance = ref(null)
 const mode = ref('all')
@@ -66,7 +67,6 @@ async function loadChartData() {
     if (mode.value === 'top20') sorted = sorted.slice(0, 20)
 
     const labels = sorted.map(([label]) => label)
-    const data = sorted.map(([_, count]) => count)
 
     if (chartInstance.value) chartInstance.value.destroy()
     const ctx = document.getElementById('countChart').getContext('2d')
@@ -131,7 +131,7 @@ async function loadChartData() {
           labels,
           datasets: [{
             label: 'Detections',
-            data,
+            data: sorted.map(([_, count]) => count),
             backgroundColor: labels.map((_, i) => {
               const step = i / labels.length
               const r = 220 + Math.round(35 * step)
