@@ -13,18 +13,14 @@
       </thead>
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.id">
-          <!-- Parse ts -->
           <td class="border px-3 py-2 text-gray-700">
-            {{ ev.ts ? new Date(ev.ts).toLocaleString('en-US') : '—' }}
+            {{ new Date(ev.ts).toLocaleString('en-US') }}
           </td>
-
-          <td class="border px-3 py-2">{{ ev.camera_id || '—' }}</td>
-          <td class="border px-3 py-2">{{ ev.product_brand || '—' }}</td>
-          <td class="border px-3 py-2">{{ ev.product_name || '—' }}</td>
-
-          <!-- Parse confidence -->
+          <td class="border px-3 py-2">{{ ev.camera_id }}</td>
+          <td class="border px-3 py-2">{{ ev.product_brand }}</td>
+          <td class="border px-3 py-2">{{ ev.product_name }}</td>
           <td class="border px-3 py-2">
-            {{ ev.confidence !== undefined ? (parseFloat(ev.confidence) * 100).toFixed(1) + '%' : '—' }}
+            {{ (parseFloat(ev.confidence) * 100).toFixed(1) }}%
           </td>
         </tr>
       </tbody>
@@ -71,6 +67,7 @@ const pageSize = 10
 async function loadEvents() {
   try {
     const res = await API.get('/events?camera_id=cam1')
+    console.log('Events response:', res.data)
     events.value = res.data
   } catch (err) {
     console.error('Error loading events:', err)
