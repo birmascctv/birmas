@@ -48,6 +48,7 @@ async function loadChartData() {
     const res = await API.get('/events?camera_id=cam1')
     const events = Array.isArray(res.data) ? res.data : []
 
+    // Build counts
     let counts = {}
     if (mode.value === 'brand') {
       events.forEach(ev => {
@@ -58,8 +59,8 @@ async function loadChartData() {
       events.forEach(ev => {
         const brand = ev.product_brand || 'Unknown'
         const product = ev.product_name || 'Unnamed'
-        const label = `${brand} - ${product}`
-        counts[label] = (counts[label] || 0) + 1
+        const key = `${brand} ${product}`
+        counts[key] = (counts[key] || 0) + 1
       })
     }
 
@@ -79,22 +80,11 @@ async function loadChartData() {
         type: 'treemap',
         data: {
           datasets: [{
-            tree: sorted.map(([label, count]) => {
-              const parts = (label || '').split(' - ')
-              const brand = parts[0] || 'Unknown'
-              const product = parts[1] || 'Unnamed'
-              return { label: `${brand} - ${product}`, brand, value: Number(count) || 0 }
-            }),
+            tree: sorted.map(([label, count]) => ({
+              label: label || 'Unknown Unnamed',
+              value: Number(count) || 0
+            })),
             key: 'value',
-            groups: ['brand'],
-            backgroundColor(ctx) {
-              const i = ctx.index
-              const step = i / labels.length
-              const r = 220 + Math.round(35 * step)
-              const g = 38 + Math.round(61 * step)
-              const b = 38 + Math.round(94 * step)
-              return `rgba(${r}, ${g}, ${b}, 0.9)`
-            },
             labels: {
               display: true,
               formatter(ctx) {
@@ -102,6 +92,14 @@ async function loadChartData() {
                 const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
                 return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
               }
+            },
+            backgroundColor(ctx) {
+              const i = ctx.index
+              const step = i / labels.length
+              const r = 220 + Math.round(35 * step)
+              const g = 38 + Math.round(61 * step)
+              const b = 38 + Math.round(94 * step)
+              return `rgba(${r}, ${g}, ${b}, 0.9)`
             }
           }]
         },
@@ -117,12 +115,6 @@ async function loadChartData() {
                 }
               }
             }
-          },
-          onClick(evt, elements) {
-            if (!elements.length) return
-            const node = elements[0].raw
-            drilledBrand.value = node.brand
-            drillDownTreemap(ctx, node.brand)
           }
         }
       })
@@ -168,53 +160,6 @@ async function loadChartData() {
   } catch (err) {
     console.error('Error loading chart data:', err)
   }
-}
-
-function drillDownTreemap(ctx, brand) {
-  const brandProducts = allData.filter(([label]) => label.startsWith(brand))
-  chartInstance.value.destroy()
-  chartInstance.value = new Chart(ctx, {
-    type: 'treemap',
-    data: {
-      datasets: [{
-        tree: brandProducts.map(([label, count]) => ({
-          label: label || 'Unknown - Unnamed',
-          value: Number(count) || 0
-        })),
-        key: 'value',
-        groups: ['label'],
-        backgroundColor(ctx) {
-          const i = ctx.index
-          const step = i / brandProducts.length
-          const r = 220 + Math.round(35 * step)
-          const g = 38 + Math.round(61 * step)
-          const b = 38 + Math.round(94 * step)
-          return `rgba(${r}, ${g}, ${b}, 0.9)`
-        },
-        labels: {
-          display: true,
-          formatter(ctx) {
-            const total = brandProducts.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
-            const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
-            return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
-          }
-        }
-      }]
-    },
-    options: {
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const total = brandProducts.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
-              const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
-              return `${ctx.raw.label}: ${ctx.raw.value} (${pct}%)`
-            }
-          }
-        }
-      }
-    }
-  })
 }
 
 function resetTreemap() {
