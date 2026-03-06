@@ -5,6 +5,7 @@ from tracker import ProductTracker
 
 print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
+
 # ---------------- CONFIG ----------------
 STREAM_URL = os.getenv("STREAM_URL", "rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101")
 API_ENDPOINT = os.getenv("API_ENDPOINT", "http://10.0.0.1:8000/api/events")
@@ -15,7 +16,7 @@ print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
 
 IMG_SIZE = 640        # inference image size
-FRAME_SKIP = 15        # infer every 2nd frame
+FRAME_SKIP = 15       # infer every 15th frame
 LOG_TTL = 8           # seconds (product removed timeout)
 # ----------------------------------------
 
@@ -38,10 +39,8 @@ print("Model loaded:", model.names)
 # ---------------- INIT TRACKER ----------------
 tracker = ProductTracker(fps=30)
 
-# track_id -> {last_seen, label}
 seen_tracks = {}
 frame_count = 0
-last_infer = 0  # <-- NEW: track last inference time
 
 # ---------------- MAIN LOOP ----------------
 while True:
@@ -60,14 +59,13 @@ while True:
 
     if frame_count == 0:
         print("[INFO] First frame received from stream")
+        cv2.imwrite("debug_first_frame.jpg", frame)  # <-- Save first frame for manual check
 
     frame_count += 1
 
-    now = time.time()
-    # -------- TIME-BASED THROTTLE --------
-    if now - last_infer < 1.0:   # skip until 1 second passes
+    # -------- FRAME-BASED THROTTLE --------
+    if frame_count % FRAME_SKIP != 0:
         continue
-    last_infer = now
 
     try:
         # -------- YOLO --------
@@ -93,6 +91,7 @@ while True:
         tracked = tracker.update(detections, frame.shape)
 
         # -------- PRODUCT ADDED --------
+        now = time.time()
         for obj in tracked:
             tid = obj["track_id"]
             label = model.names[obj["class_id"]] if obj["class_id"] is not None else "unknown"
@@ -104,7 +103,6 @@ while True:
                     "label": label,
                     "track_id": tid
                 }
-
                 requests.post(API_ENDPOINT, json=payload, timeout=2)
                 print(f"+ ADDED {label} (ID {tid})")
 
@@ -124,7 +122,6 @@ while True:
                     "label": seen_tracks[tid]["label"],
                     "track_id": tid
                 }
-
                 requests.post(API_ENDPOINT, json=payload, timeout=2)
                 print(f"- REMOVED {seen_tracks[tid]['label']} (ID {tid})")
 
