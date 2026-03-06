@@ -1,46 +1,50 @@
-import os
-import time
-import requests
 import random
+import requests
+from datetime import datetime
+import psycopg2
 
-# API endpoint for posting events
-API_ENDPOINT ="http://localhost:8000/api/events"
+# Connect to Postgres to fetch products
+conn = psycopg2.connect(
+    dbname="birmas",
+    user="birmas_user",
+    password="B1rm4sC4m3r4",
+    host="localhost",
+    port="5432"
+)
+cur = conn.cursor()
 
-# Some dummy labels to simulate detections
-DUMMY_LABELS = ["person", "car", "dog", "cat", "bottle", "chair", "tv"]
+# Pull all products
+cur.execute("SELECT product_brand, product_name FROM product;")
+products = cur.fetchall()
+conn.close()
 
-def generate_dummy_event():
-    """Generate a fake detection event."""
-    label = random.choice(DUMMY_LABELS)
-    confidence = round(random.uniform(0.5, 0.99), 2)
-    bbox = [
-        random.randint(0, 100),   # x1
-        random.randint(0, 100),   # y1
-        random.randint(100, 200), # x2
-        random.randint(100, 200), # y2
-    ]
-    ev = {
-        "camera_id": "cam1",
-        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "label": label,
-        "confidence": confidence,
-        "bbox": bbox,
-    }
-    return ev
+API_URL = "http://127.0.0.1:8000/api/events"
 
-def main():
-    print("=== Dummy Inference Service Started ===")
-    print(f"Posting to API endpoint: {API_ENDPOINT}")
+def post_event(event):
+    r = requests.post(API_URL, json=event)
+    print("POST status:", r.status_code)
+    print("Response:", r.json())
 
-    while True:
-        ev = generate_dummy_event()
-        print("Generated dummy event:", ev)
-        try:
-            r = requests.post(API_ENDPOINT, json=ev, timeout=2)
-            print("Posted event:", r.status_code, r.text)
-        except Exception as e:
-            print("Failed to post event:", e)
-        time.sleep(2)  # send every 2 seconds
+def get_events(camera_id):
+    r = requests.get(API_URL, params={"camera_id": camera_id})
+    print("GET status:", r.status_code)
+    print("Events for", camera_id, ":", r.json())
 
 if __name__ == "__main__":
-    main()
+    # Pick a random product
+    brand, name = random.choice(products)
+
+    # Build dummy event
+    dummy_event = {
+        "camera_id": "cam1",
+        "ts": datetime.utcnow().isoformat(),
+        "product_brand": brand,
+        "product_name": name,
+        "confidence": round(random.uniform(0.7, 0.99), 2)
+    }
+
+    # Insert into events table via API
+    post_event(dummy_event)
+
+    # Fetch events for cam1
+    get_events("cam1")
