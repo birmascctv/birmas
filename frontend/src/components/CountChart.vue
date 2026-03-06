@@ -83,7 +83,7 @@ async function loadChartData() {
               const parts = (label || '').split(' - ')
               const brand = parts[0] || 'Unknown'
               const product = parts[1] || 'Unnamed'
-              return { label: `${brand} - ${product}`, brand, value: count || 0 }
+              return { label: `${brand} - ${product}`, brand, value: Number(count) || 0 }
             }),
             key: 'value',
             groups: ['brand'],
@@ -98,7 +98,7 @@ async function loadChartData() {
             labels: {
               display: true,
               formatter(ctx) {
-                const total = sorted.reduce((sum, [, c]) => sum + (c || 0), 0)
+                const total = sorted.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
                 const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
                 return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
               }
@@ -111,7 +111,7 @@ async function loadChartData() {
             tooltip: {
               callbacks: {
                 label: ctx => {
-                  const total = sorted.reduce((sum, [, c]) => sum + (c || 0), 0)
+                  const total = sorted.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
                   const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
                   return `${ctx.raw.label}: ${ctx.raw.value} (${pct}%)`
                 }
@@ -133,7 +133,7 @@ async function loadChartData() {
           labels,
           datasets: [{
             label: 'Detections',
-            data: sorted.map(([_, count]) => count || 0),
+            data: sorted.map(([_, count]) => Number(count) || 0),
             backgroundColor: labels.map((_, i) => {
               const step = i / labels.length
               const r = 220 + Math.round(35 * step)
@@ -179,7 +179,7 @@ function drillDownTreemap(ctx, brand) {
       datasets: [{
         tree: brandProducts.map(([label, count]) => ({
           label: label || 'Unknown - Unnamed',
-          value: count || 0
+          value: Number(count) || 0
         })),
         key: 'value',
         groups: ['label'],
@@ -194,7 +194,7 @@ function drillDownTreemap(ctx, brand) {
         labels: {
           display: true,
           formatter(ctx) {
-            const total = brandProducts.reduce((sum, [, c]) => sum + (c || 0), 0)
+            const total = brandProducts.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
             const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
             return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
           }
@@ -206,7 +206,7 @@ function drillDownTreemap(ctx, brand) {
         tooltip: {
           callbacks: {
             label: ctx => {
-              const total = brandProducts.reduce((sum, [, c]) => sum + (c || 0), 0)
+              const total = brandProducts.reduce((sum, [, c]) => sum + (Number(c) || 0), 0)
               const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
               return `${ctx.raw.label}: ${ctx.raw.value} (${pct}%)`
             }
