@@ -16,6 +16,13 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     ts = Column(DateTime, default=datetime.utcnow, index=True)
     camera_id = Column(String, index=True)
+
+    # Raw YOLO outputs
+    label = Column(String)          # YOLO class label
+    bbox = Column(String)           # bounding box coordinates
+
+    # Enriched product info
     product_brand = Column(String)
     product_name = Column(String)
-    confidence = Column(Float)   # store numeric confidence scores
+
+    confidence = Column(Float)      # numeric confidence score

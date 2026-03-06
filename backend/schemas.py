@@ -27,8 +27,10 @@ class EventBase(BaseModel):
     camera_id: str
     ts: datetime
     label: str
-    confidence: float
     bbox: str
+    product_brand: str
+    product_name: str
+    confidence: float
 
 class EventCreate(EventBase):
     pass
