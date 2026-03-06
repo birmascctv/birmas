@@ -32,10 +32,10 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { TreemapController, TreemapElement } from 'chartjs-chart-treemap' // ✅ explicit import
+import { TreemapController, TreemapElement } from 'chartjs-chart-treemap'
 import API from '../api'
 
-// Register Chart.js core + treemap plugin
+// ✅ Register Chart.js core + treemap plugin
 Chart.register(...registerables, TreemapController, TreemapElement)
 
 const chartInstance = ref(null)
@@ -56,9 +56,9 @@ async function loadChartData() {
       })
     } else {
       events.forEach(ev => {
-        const label = ev.product_brand && ev.product_name
-          ? `${ev.product_brand} - ${ev.product_name}`
-          : 'Unknown'
+        const brand = ev.product_brand || 'Unknown'
+        const product = ev.product_name || 'Unnamed'
+        const label = `${brand} - ${product}`
         counts[label] = (counts[label] || 0) + 1
       })
     }
@@ -80,8 +80,8 @@ async function loadChartData() {
         data: {
           datasets: [{
             tree: sorted.map(([label, count]) => {
-              const brand = label.split(' - ')[0] || label
-              return { label, brand, value: count }
+              const brand = label.split(' - ')[0] || 'Unknown'
+              return { label: label || 'Unknown', brand, value: count || 0 }
             }),
             key: 'value',
             groups: ['brand'],
@@ -97,7 +97,7 @@ async function loadChartData() {
               display: true,
               formatter(ctx) {
                 const total = sorted.reduce((sum, [, c]) => sum + c, 0)
-                const pct = ((ctx.raw.value / total) * 100).toFixed(1)
+                const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
                 return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
               }
             }
@@ -110,7 +110,7 @@ async function loadChartData() {
               callbacks: {
                 label: ctx => {
                   const total = sorted.reduce((sum, [, c]) => sum + c, 0)
-                  const pct = ((ctx.raw.value / total) * 100).toFixed(1)
+                  const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
                   return `${ctx.raw.label}: ${ctx.raw.value} (${pct}%)`
                 }
               }
@@ -175,7 +175,10 @@ function drillDownTreemap(ctx, brand) {
     type: 'treemap',
     data: {
       datasets: [{
-        tree: brandProducts.map(([label, count]) => ({ label, value: count })),
+        tree: brandProducts.map(([label, count]) => ({
+          label: label || 'Unknown',
+          value: count || 0
+        })),
         key: 'value',
         groups: ['label'],
         backgroundColor(ctx) {
@@ -190,7 +193,7 @@ function drillDownTreemap(ctx, brand) {
           display: true,
           formatter(ctx) {
             const total = brandProducts.reduce((sum, [, c]) => sum + c, 0)
-            const pct = ((ctx.raw.value / total) * 100).toFixed(1)
+            const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
             return `${ctx.raw.label}\n${ctx.raw.value} (${pct}%)`
           }
         }
@@ -202,7 +205,7 @@ function drillDownTreemap(ctx, brand) {
           callbacks: {
             label: ctx => {
               const total = brandProducts.reduce((sum, [, c]) => sum + c, 0)
-              const pct = ((ctx.raw.value / total) * 100).toFixed(1)
+              const pct = total ? ((ctx.raw.value / total) * 100).toFixed(1) : 0
               return `${ctx.raw.label}: ${ctx.raw.value} (${pct}%)`
             }
           }
