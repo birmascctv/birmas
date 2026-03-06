@@ -13,11 +13,10 @@
       </thead>
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.id">
-          <!-- Normalize ts: strip microseconds -->
           <td class="border px-3 py-2 text-gray-700">
             {{
               ev.ts
-                ? new Date(ev.ts.replace(/\.\d+$/, '')).toLocaleString('en-US')
+                ? new Date(ev.ts).toISOString().replace('T', ' ').split('.')[0]
                 : '—'
             }}
           </td>
@@ -26,7 +25,6 @@
           <td class="border px-3 py-2">{{ ev.product_brand || '—' }}</td>
           <td class="border px-3 py-2">{{ ev.product_name || '—' }}</td>
 
-          <!-- Confidence: ensure numeric -->
           <td class="border px-3 py-2">
             {{
               ev.confidence !== undefined && ev.confidence !== null
