@@ -1,5 +1,6 @@
 <template>
-  <div class="w-full h-[600px] overflow-y-auto"> <!-- taller container with scroll -->
+  <!-- Taller container with vertical scroll for many products -->
+  <div class="w-full h-[800px] overflow-y-auto">
     <canvas id="countChart"></canvas>
   </div>
 </template>
@@ -50,7 +51,7 @@ async function loadChartData() {
           backgroundColor: 'rgba(220, 38, 38, 0.7)', // red tone
           borderColor: 'rgba(220, 38, 38, 1)',
           borderWidth: 1,
-          barThickness: 24 // make bars thicker
+          barThickness: 28 // thicker bars
         }]
       },
       options: {
@@ -64,9 +65,8 @@ async function loadChartData() {
           x: { beginAtZero: true },
           y: {
             ticks: {
-              autoSkip: false, // show all labels
-              maxRotation: 0,
-              minRotation: 0
+              font: { size: 12 }, // smaller font for long labels
+              autoSkip: false     // show all labels
             }
           }
         }
