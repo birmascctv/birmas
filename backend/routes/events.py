@@ -56,10 +56,11 @@
 #         raise HTTPException(status_code=500, detail=str(e))
 
 import random
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import Event, Product
+from backend.schemas import EventOut
 from datetime import datetime, timedelta
 
 router = APIRouter()
@@ -71,6 +72,7 @@ def get_db():
     finally:
         db.close()
 
+# --- Temporary seeding route ---
 @router.post("/seed-events")
 async def seed_events(db: Session = Depends(get_db)):
     try:
@@ -78,18 +80,17 @@ async def seed_events(db: Session = Depends(get_db)):
         if not products:
             raise HTTPException(status_code=400, detail="No products found in product table")
 
-        # Generate 250 random events
         for _ in range(250):
             product = random.choice(products)
-            ts = datetime.utcnow() - timedelta(minutes=random.randint(0, 1440))  # random time in last day
+            ts = datetime.utcnow() - timedelta(minutes=random.randint(0, 1440))
             confidence = round(random.uniform(0.5, 0.99), 2)
             bbox = f"{random.randint(0,300)},{random.randint(0,300)},{random.randint(300,640)},{random.randint(300,480)}"
 
             ev = Event(
-                camera_id=random.choice(["cam1", "cam2", "cam3"]),
+                camera_id="cam1",                 # force cam1 since you only have one camera
                 ts=ts,
-                label=product.class_name,       # raw YOLO label
-                bbox=bbox,                      # fake bbox
+                label=product.class_name,
+                bbox=bbox,
                 product_brand=product.product_brand,
                 product_name=product.product_name,
                 confidence=confidence
@@ -98,5 +99,19 @@ async def seed_events(db: Session = Depends(get_db)):
 
         db.commit()
         return {"status": "ok", "inserted": 250}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- Adjusted get_events route (no limit) ---
+@router.get("/events", response_model=list[EventOut])
+async def get_events(camera_id: str, db: Session = Depends(get_db)):
+    try:
+        events = (
+            db.query(Event)
+            .filter(Event.camera_id == camera_id)
+            .order_by(Event.ts.desc())
+            .all()   # <-- removed .limit(100)
+        )
+        return events
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
