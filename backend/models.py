@@ -26,3 +26,11 @@ class Event(Base):
     product_name = Column(String)
 
     confidence = Column(Float)      # numeric confidence score
+
+class Product(Base):
+    __tablename__ = "product"
+
+    class_id = Column(Integer, primary_key=True, index=True)
+    class_name = Column(String, nullable=False)
+    product_brand = Column(String, nullable=False)
+    product_name = Column(String, nullable=False)
