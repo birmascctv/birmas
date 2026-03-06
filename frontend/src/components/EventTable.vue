@@ -13,7 +13,7 @@
       </thead>
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.id">
-          <!-- Safely parse ts -->
+          <!-- Parse ts -->
           <td class="border px-3 py-2 text-gray-700">
             {{ ev.ts ? new Date(ev.ts).toLocaleString('en-US') : '—' }}
           </td>
@@ -22,9 +22,9 @@
           <td class="border px-3 py-2">{{ ev.product_brand || '—' }}</td>
           <td class="border px-3 py-2">{{ ev.product_name || '—' }}</td>
 
-          <!-- Safely parse confidence -->
+          <!-- Parse confidence -->
           <td class="border px-3 py-2">
-            {{ ev.confidence ? (parseFloat(ev.confidence) * 100).toFixed(1) + '%' : '—' }}
+            {{ ev.confidence !== undefined ? (parseFloat(ev.confidence) * 100).toFixed(1) + '%' : '—' }}
           </td>
         </tr>
       </tbody>
