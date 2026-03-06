@@ -16,12 +16,6 @@
       </button>
     </div>
 
-    <!-- Breadcrumb trail for treemap drill-down -->
-    <div v-if="mode === 'all'" class="mb-2 text-sm">
-      <span class="cursor-pointer text-blue-600" @click="resetTreemap">All Products</span>
-      <span v-if="drilledBrand"> > {{ drilledBrand }}</span>
-    </div>
-
     <!-- Chart container -->
     <div class="w-full h-[600px]">
       <canvas id="countChart"></canvas>
@@ -32,15 +26,13 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import 'chartjs-chart-treemap'
+import 'chartjs-chart-treemap'   // plugin registers itself
 import API from '../api'
 
 Chart.register(...registerables)
 
 const chartInstance = ref(null)
 const mode = ref('all') // default mode
-const drilledBrand = ref(null) // track drill-down state
-let allData = [] // keep full dataset for reset
 
 async function loadChartData() {
   try {
@@ -50,11 +42,13 @@ async function loadChartData() {
     let counts = {}
 
     if (mode.value === 'brand') {
+      // Group by brand only
       events.forEach(ev => {
         const label = ev.product_brand || 'Unknown'
         counts[label] = (counts[label] || 0) + 1
       })
     } else {
+      // Group by product_brand + product_name
       events.forEach(ev => {
         const label = ev.product_brand && ev.product_name
           ? `${ev.product_brand} - ${ev.product_name}`
@@ -63,7 +57,9 @@ async function loadChartData() {
       })
     }
 
+    // Sort by count descending
     let sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+
     if (mode.value === 'top20') {
       sorted = sorted.slice(0, 20)
     }
@@ -71,13 +67,14 @@ async function loadChartData() {
     const labels = sorted.map(([label]) => label)
     const data = sorted.map(([_, count]) => count)
 
-    if (chartInstance.value) chartInstance.value.destroy()
+    if (chartInstance.value) {
+      chartInstance.value.destroy()
+    }
+
     const ctx = document.getElementById('countChart').getContext('2d')
 
     if (mode.value === 'all') {
-      allData = sorted
-      drilledBrand.value = null
-
+      // Treemap view for all products
       chartInstance.value = new Chart(ctx, {
         type: 'treemap',
         data: {
@@ -87,7 +84,7 @@ async function loadChartData() {
               return { label, brand, value: count }
             }),
             key: 'value',
-            groups: ['brand'],
+            groups: ['brand'], // group by brand
             backgroundColor(ctx) {
               const i = ctx.index
               const step = i / labels.length
@@ -116,12 +113,49 @@ async function loadChartData() {
           onClick(evt, elements) {
             if (!elements.length) return
             const node = elements[0].raw
-            drilledBrand.value = node.brand
-            drillDownTreemap(ctx, node.brand)
+            // Drill down: filter products of clicked brand
+            const brandProducts = sorted.filter(([label]) =>
+              label.startsWith(node.brand)
+            )
+            chartInstance.value.destroy()
+            chartInstance.value = new Chart(ctx, {
+              type: 'treemap',
+              data: {
+                datasets: [{
+                  tree: brandProducts.map(([label, count]) => ({ label, value: count })),
+                  key: 'value',
+                  groups: ['label'],
+                  backgroundColor(ctx) {
+                    const i = ctx.index
+                    const step = i / brandProducts.length
+                    const r = 220 + Math.round(35 * step)
+                    const g = 38 + Math.round(61 * step)
+                    const b = 38 + Math.round(94 * step)
+                    return `rgba(${r}, ${g}, ${b}, 0.9)`
+                  },
+                  labels: {
+                    display: true,
+                    formatter(ctx) {
+                      return ctx.raw.label
+                    }
+                  }
+                }]
+              },
+              options: {
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: ctx => `${ctx.raw.label}: ${ctx.raw.value}`
+                    }
+                  }
+                }
+              }
+            })
           }
         }
       })
     } else {
+      // Bar chart for Top 20 or Group by Brand
       chartInstance.value = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -163,50 +197,6 @@ async function loadChartData() {
   } catch (err) {
     console.error('Error loading chart data:', err)
   }
-}
-
-function drillDownTreemap(ctx, brand) {
-  const brandProducts = allData.filter(([label]) =>
-    label.startsWith(brand)
-  )
-  chartInstance.value.destroy()
-  chartInstance.value = new Chart(ctx, {
-    type: 'treemap',
-    data: {
-      datasets: [{
-        tree: brandProducts.map(([label, count]) => ({ label, value: count })),
-        key: 'value',
-        groups: ['label'],
-        backgroundColor(ctx) {
-          const i = ctx.index
-          const step = i / brandProducts.length
-          const r = 220 + Math.round(35 * step)
-          const g = 38 + Math.round(61 * step)
-          const b = 38 + Math.round(94 * step)
-          return `rgba(${r}, ${g}, ${b}, 0.9)`
-        },
-        labels: {
-          display: true,
-          formatter(ctx) {
-            return ctx.raw.label
-          }
-        }
-      }]
-    },
-    options: {
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.raw.label}: ${ctx.raw.value}`
-          }
-        }
-      }
-    }
-  })
-}
-
-function resetTreemap() {
-  loadChartData() // reload full treemap
 }
 
 onMounted(loadChartData)
