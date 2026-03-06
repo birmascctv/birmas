@@ -1,29 +1,31 @@
 <template>
   <div class="flex-1">
-    <!-- Add a null check so Vue doesn't crash -->
     <table v-if="paginatedEvents && paginatedEvents.length"
            class="text-sm w-full border-collapse text-center">
       <thead>
         <tr>
           <th class="border px-3 py-2 bg-slate-100">Time</th>
           <th class="border px-3 py-2 bg-slate-100">Camera</th>
-          <th class="border px-3 py-2 bg-slate-100">Label</th>
+          <th class="border px-3 py-2 bg-slate-100">Brand</th>
+          <th class="border px-3 py-2 bg-slate-100">Product</th>
           <th class="border px-3 py-2 bg-slate-100">Conf</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="ev in paginatedEvents" :key="ev.ts">
+        <tr v-for="ev in paginatedEvents" :key="ev.id">
+          <!-- use ts instead of timestamp -->
           <td class="border px-3 py-2 text-gray-700">{{ new Date(ev.ts).toLocaleString() }}</td>
           <td class="border px-3 py-2">{{ ev.camera_id }}</td>
-          <td class="border px-3 py-2">{{ ev.label }}</td>
-          <td class="border px-3 py-2">{{ (ev.confidence*100).toFixed(1) }}%</td>
+          <td class="border px-3 py-2">{{ ev.product_brand }}</td>
+          <td class="border px-3 py-2">{{ ev.product_name }}</td>
+          <td class="border px-3 py-2">{{ (ev.confidence * 100).toFixed(1) }}%</td>
         </tr>
       </tbody>
     </table>
 
     <div v-else class="text-center text-slate-400 py-10">No data available</div>
 
-    <!-- Pagination stays the same -->
+    <!-- Pagination -->
     <div class="flex justify-center gap-2 mt-3" v-if="totalPages > 1">
       <button @click="currentPage = Math.max(1, currentPage - 1)"
               class="px-2 py-1 rounded border"
@@ -52,7 +54,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import API from '../api'   // use your api.js wrapper
+import API from '../api'
 
 const events = ref([])
 const currentPage = ref(1)
