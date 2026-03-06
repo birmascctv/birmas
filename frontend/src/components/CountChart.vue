@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-64">
+  <div class="w-full h-96"> <!-- taller container for readability -->
     <canvas id="countChart"></canvas>
   </div>
 </template>
@@ -16,15 +16,15 @@ const chartInstance = ref(null)
 async function loadChartData() {
   try {
     const res = await API.get('/events?camera_id=cam1')
-    // Ensure we always get an array
     const events = Array.isArray(res.data) ? res.data : []
     console.log('Chart events response:', res.data)
 
-    // Count labels (product types)
+    // Count products by brand + name
     const counts = {}
     events.forEach(ev => {
-      // Defensive parsing: make sure label exists
-      const label = ev.label || 'Unknown'
+      const label = ev.product_brand && ev.product_name
+        ? `${ev.product_brand} - ${ev.product_name}`
+        : 'Unknown'
       counts[label] = (counts[label] || 0) + 1
     })
 
@@ -36,7 +36,7 @@ async function loadChartData() {
       chartInstance.value.destroy()
     }
 
-    // Create chart
+    // Create horizontal bar chart
     const ctx = document.getElementById('countChart').getContext('2d')
     chartInstance.value = new Chart(ctx, {
       type: 'bar',
@@ -51,12 +51,13 @@ async function loadChartData() {
         }]
       },
       options: {
+        indexAxis: 'y', // horizontal bars
         responsive: true,
         plugins: {
           legend: { display: false }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: { beginAtZero: true }
         }
       }
     })
