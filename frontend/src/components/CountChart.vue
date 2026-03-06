@@ -67,8 +67,8 @@ async function loadChartData() {
     const labels = sorted.map(([label]) => label)
     const data = sorted.map(([_, count]) => count)
 
-    // Auto-adjust chart height: ~25px per bar
-    chartHeight.value = labels.length * 25
+    // Auto-adjust chart height: ~30px per bar
+    chartHeight.value = labels.length * 30
 
     // Destroy old chart if exists
     if (chartInstance.value) {
@@ -77,13 +77,12 @@ async function loadChartData() {
 
     const ctx = document.getElementById('countChart').getContext('2d')
 
-    // Generate gradient colors per bar (bright red → lighter red)
+    // Generate gradient colors per bar (dark → light red by order)
     const backgroundColors = labels.map((_, i) => {
       const step = i / labels.length
-      // Start from dashboard red (220,38,38) and lighten gradually
-      const r = 220 + Math.round(35 * step)   // 220 → 255
-      const g = 38  + Math.round(61 * step)   // 38 → 99
-      const b = 38  + Math.round(94 * step)   // 38 → 132
+      const r = 139 + Math.round(116 * step) // 139 → 255
+      const g = 0   + Math.round(99 * step)  // 0 → 99
+      const b = 0   + Math.round(132 * step) // 0 → 132
       return `rgba(${r}, ${g}, ${b}, 0.9)`
     })
 
