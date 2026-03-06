@@ -14,7 +14,7 @@
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.id">
           <!-- use ts instead of timestamp -->
-          <td class="border px-3 py-2 text-gray-700">{{ new Date(ev.ts).toLocaleString() }}</td>
+          <td class="border px-3 py-2 text-gray-700">{{ new Date(ev.ts).toLocaleString('en-US') }}</td>
           <td class="border px-3 py-2">{{ ev.camera_id }}</td>
           <td class="border px-3 py-2">{{ ev.product_brand }}</td>
           <td class="border px-3 py-2">{{ ev.product_name }}</td>
