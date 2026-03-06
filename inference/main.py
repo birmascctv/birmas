@@ -2,13 +2,14 @@ import sys, os
 import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
+from datetime import datetime
 
 print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
 
 # ---------------- CONFIG ----------------
 STREAM_URL = os.getenv("STREAM_URL", "rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101")
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://10.0.0.1:8000/api/events")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "http://10.0.0.1:8000/events")   # <-- match backend route
 MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
@@ -59,7 +60,7 @@ while True:
 
     if frame_count == 0:
         print("[INFO] First frame received from stream")
-        cv2.imwrite("debug_first_frame.jpg", frame)  # <-- Save first frame for manual check
+        cv2.imwrite("debug_first_frame.jpg", frame)
 
     frame_count += 1
 
@@ -94,17 +95,23 @@ while True:
         now = time.time()
         for obj in tracked:
             tid = obj["track_id"]
-            label = model.names[obj["class_id"]] if obj["class_id"] is not None else "unknown"
+            class_id = obj["class_id"]
+            label = model.names[class_id] if class_id is not None else "unknown"
+            bbox = f"{obj['bbox'][0]},{obj['bbox'][1]},{obj['bbox'][2]},{obj['bbox'][3]}"
 
             if tid not in seen_tracks:
                 payload = {
                     "camera_id": "cam1",
-                    "event_type": "PRODUCT_ADDED",
+                    "ts": datetime.utcnow().isoformat(),
                     "label": label,
-                    "track_id": tid
+                    "bbox": bbox,
+                    "confidence": float(obj["confidence"])
                 }
-                requests.post(API_ENDPOINT, json=payload, timeout=2)
-                print(f"+ ADDED {label} (ID {tid})")
+                try:
+                    requests.post(API_ENDPOINT, json=payload, timeout=2)
+                    print(f"+ ADDED {label} (ID {tid})")
+                except Exception as e:
+                    print("[ERROR] Failed to post event:", e)
 
                 seen_tracks[tid] = {
                     "last_seen": now,
@@ -118,12 +125,16 @@ while True:
             if now - seen_tracks[tid]["last_seen"] > LOG_TTL:
                 payload = {
                     "camera_id": "cam1",
-                    "event_type": "PRODUCT_REMOVED",
+                    "ts": datetime.utcnow().isoformat(),
                     "label": seen_tracks[tid]["label"],
-                    "track_id": tid
+                    "bbox": "",   # no bbox on removal
+                    "confidence": 0.0
                 }
-                requests.post(API_ENDPOINT, json=payload, timeout=2)
-                print(f"- REMOVED {seen_tracks[tid]['label']} (ID {tid})")
+                try:
+                    requests.post(API_ENDPOINT, json=payload, timeout=2)
+                    print(f"- REMOVED {seen_tracks[tid]['label']} (ID {tid})")
+                except Exception as e:
+                    print("[ERROR] Failed to post removal:", e)
 
                 del seen_tracks[tid]
 

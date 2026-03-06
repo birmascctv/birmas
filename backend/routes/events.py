@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
-from backend.models import Event
+from backend.models import Event, Product
 from backend.schemas import EventCreate, EventOut
 from datetime import datetime
 
@@ -17,12 +17,17 @@ def get_db():
 @router.post("/events", response_model=EventOut)
 async def post_event(ev: EventCreate, request: Request, db: Session = Depends(get_db)):
     try:
+        # Try to enrich product info based on YOLO label
+        product = db.query(Product).filter(Product.class_name == ev.label).first()
+
         new_event = Event(
             camera_id=ev.camera_id,
-            ts=ev.ts if ev.ts else datetime.utcnow(),  # default to now if not provided
-            product_brand=ev.product_brand,
-            product_name=ev.product_name,
-            confidence=ev.confidence
+            ts=ev.ts if ev.ts else datetime.utcnow(),
+            label=ev.label,
+            bbox=ev.bbox,
+            confidence=ev.confidence,
+            product_brand=product.product_brand if product else "Unknown",
+            product_name=product.product_name if product else "Unknown"
         )
         db.add(new_event)
         db.commit()
