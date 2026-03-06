@@ -67,8 +67,8 @@ async function loadChartData() {
     const labels = sorted.map(([label]) => label)
     const data = sorted.map(([_, count]) => count)
 
-    // Auto-adjust chart height: 40px per bar
-    chartHeight.value = labels.length * 40
+    // Auto-adjust chart height: ~30px per bar
+    chartHeight.value = labels.length * 30
 
     // Destroy old chart if exists
     if (chartInstance.value) {
@@ -98,9 +98,9 @@ async function loadChartData() {
           backgroundColor: backgroundColors,
           borderColor: borderColors,
           borderWidth: 1,
-          barThickness: 28,        // consistent thickness
-          categoryPercentage: 1.0, // remove gaps
-          barPercentage: 1.0       // bars connected
+          barThickness: 'flex',     // thin bars, auto-fit
+          categoryPercentage: 1.0,  // no spacing
+          barPercentage: 1.0        // bars connected
         }]
       },
       options: {
