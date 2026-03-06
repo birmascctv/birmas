@@ -20,11 +20,9 @@
                 : '—'
             }}
           </td>
-
           <td class="border px-3 py-2">{{ ev.camera_id || '—' }}</td>
           <td class="border px-3 py-2">{{ ev.product_brand || '—' }}</td>
           <td class="border px-3 py-2">{{ ev.product_name || '—' }}</td>
-
           <td class="border px-3 py-2">
             {{
               ev.confidence !== undefined && ev.confidence !== null
@@ -93,4 +91,23 @@ const totalPages = computed(() =>
 const paginatedEvents = computed(() =>
   events.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize)
 )
+
+// ✅ Define pagesToShow to fix Vue warning
+const pagesToShow = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const range = []
+
+  const start = Math.max(1, current - 2)
+  const end = Math.min(total, current + 2)
+
+  for (let i = start; i <= end; i++) {
+    range.push(i)
+  }
+
+  if (start > 1) range.unshift('...')
+  if (end < total) range.push('...')
+
+  return range
+})
 </script>
