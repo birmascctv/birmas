@@ -16,12 +16,16 @@ const chartInstance = ref(null)
 async function loadChartData() {
   try {
     const res = await API.get('/events?camera_id=cam1')
-    const events = res.data
+    // Ensure we always get an array
+    const events = Array.isArray(res.data) ? res.data : []
+    console.log('Chart events response:', res.data)
 
-    // Count labels (e.g. product types)
+    // Count labels (product types)
     const counts = {}
     events.forEach(ev => {
-      counts[ev.label] = (counts[ev.label] || 0) + 1
+      // Defensive parsing: make sure label exists
+      const label = ev.label || 'Unknown'
+      counts[label] = (counts[label] || 0) + 1
     })
 
     const labels = Object.keys(counts)
