@@ -16,8 +16,8 @@
       </button>
     </div>
 
-    <!-- Chart container -->
-    <div class="w-full h-[1000px] overflow-y-auto">
+    <!-- Chart container with dynamic height -->
+    <div :style="{ height: chartHeight + 'px' }" class="w-full overflow-y-auto">
       <canvas id="countChart"></canvas>
     </div>
   </div>
@@ -32,6 +32,7 @@ Chart.register(...registerables)
 
 const chartInstance = ref(null)
 const mode = ref('all') // default mode
+const chartHeight = ref(600) // will be adjusted dynamically
 
 async function loadChartData() {
   try {
@@ -66,6 +67,9 @@ async function loadChartData() {
     const labels = sorted.map(([label]) => label)
     const data = sorted.map(([_, count]) => count)
 
+    // Auto-adjust chart height: 40px per bar
+    chartHeight.value = labels.length * 40
+
     // Destroy old chart if exists
     if (chartInstance.value) {
       chartInstance.value.destroy()
@@ -73,17 +77,16 @@ async function loadChartData() {
 
     const ctx = document.getElementById('countChart').getContext('2d')
 
-    // Generate gradient colors per bar (dark → light red)
+    // Generate gradient colors per bar (dark → light red by order)
     const backgroundColors = labels.map((_, i) => {
       const step = i / labels.length
-      // interpolate from dark red to light red
-      const r = 220 + Math.round(35 * step)   // 220 → 255
-      const g = 38 + Math.round(61 * step)    // 38 → 99
-      const b = 38 + Math.round(94 * step)    // 38 → 132
-      return `rgba(${r}, ${g}, ${b}, 0.8)`
+      const r = 139 + Math.round(116 * step) // 139 → 255
+      const g = 0   + Math.round(99 * step)  // 0 → 99
+      const b = 0   + Math.round(132 * step) // 0 → 132
+      return `rgba(${r}, ${g}, ${b}, 0.9)`
     })
 
-    const borderColors = backgroundColors.map(c => c.replace('0.8', '1'))
+    const borderColors = backgroundColors.map(c => c.replace('0.9', '1'))
 
     chartInstance.value = new Chart(ctx, {
       type: 'bar',
