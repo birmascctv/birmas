@@ -45,11 +45,11 @@ class ProductTracker:
             track_box = [x, y, x + w, y + h]
 
             # Match track to original detection by highest IoU
-            best_iou, best_cid = 0.0, None
+            best_iou, best_cid, best_conf = 0.0, None
             for d in detections:
                 iou = _iou(track_box, d[:4])
                 if iou > best_iou:
-                    best_iou, best_cid = iou, d[5]
+                    best_iou, best_cid, best_conf = iou, d[5], d[4]
 
             results.append({
                 "track_id": t.track_id,

@@ -1,3 +1,4 @@
+import os
 import random
 import requests
 from datetime import datetime
@@ -9,7 +10,7 @@ load_dotenv()
 conn = psycopg2.connect(
     dbname="birmas",
     user="birmas_user",
-    password="DB_PASSWORD",
+    password=("DB_PASSWORD"),
     host="localhost",
     port="5432"
 )

@@ -63,10 +63,10 @@ async function loadChartData() {
   try {
     const params = { start_date: getStartDate(props.filter) }
     if (props.camera !== 'all') params.camera_id = props.camera
-    const res = await API.get('/events', ( params ))
+    const res = await API.get('/events', {params} )
     const events = Array.isArray(res.data) ? res.data : []
     }
-    
+
     // Build counts
     let counts = {}
     if (mode.value === 'brand') {
@@ -179,7 +179,6 @@ async function loadChartData() {
   } catch (err) {
     console.error('Error loading chart data:', err)
   }
-}
 
 function resetTreemap() {
   loadChartData()

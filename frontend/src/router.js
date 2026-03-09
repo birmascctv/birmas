@@ -15,8 +15,8 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const isAuth =
-    localStorage.getItem('auth_token') === 'true' ||
-    sessionStorage.getItem('auth_token') === 'true'
+    localStorage.getItem('auth_token') ||
+    sessionStorage.getItem('auth_token')
 
   if (to.path.startsWith('/dashboard') && !isAuth) {
     next('/login')

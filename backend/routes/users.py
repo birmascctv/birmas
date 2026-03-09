@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import User
-from backend.schemas import UserCreate, UserLogin, UserOut
+from backend.schemas import UserCreate, UserLogin, UserOut, TokenOut
 from jose import jwt
 import bcrypt
 import logging

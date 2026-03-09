@@ -13,3 +13,4 @@ scipy
 lap
 cython
 python-dotenv
+python-jose[cryptography]
