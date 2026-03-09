@@ -21,8 +21,9 @@ class ConnectionManager:
             try:
                 await connection.send_json(message)
             except Exception:
-                # If a client is dead, we'll clean them up later
-                pass
+                dead.append(connection)
+        for c in dead:
+            self.active_connections.remove(c)
 
 app = FastAPI()
 manager = ConnectionManager()
