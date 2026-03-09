@@ -35,7 +35,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     logger.info(f"New user registered: {user.username} (id={new_user.id})")
     return new_user
 
-@router.post("/login", response_model=UserOut)
+@router.post("/login", response_model=TokenOut)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user:

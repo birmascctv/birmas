@@ -3,13 +3,16 @@ import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
 
 # ---------------- CONFIG ----------------
-STREAM_URL = os.getenv("STREAM_URL", "rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101")
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://10.0.0.1:8000/api/events")   # <-- match backend route
+STREAM_URL = os.getenv("STREAM_URL", "")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "")   # <-- match backend route
 MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")

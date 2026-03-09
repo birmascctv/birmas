@@ -61,13 +61,12 @@ function getStartDate(filter) {
 
 async function loadChartData() {
   try {
-    const res = await API.get('/events', {
-      params: {
-        start_date: getStartDate(props.filter),
-      }
-    })
+    const params = { start_date: getStartDate(props.filter) }
+    if (props.camera !== 'all') params.camera_id = props.camera
+    const res = await API.get('/events', ( params ))
     const events = Array.isArray(res.data) ? res.data : []
-
+    }
+    
     // Build counts
     let counts = {}
     if (mode.value === 'brand') {

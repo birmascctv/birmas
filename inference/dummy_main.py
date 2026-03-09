@@ -2,12 +2,14 @@ import random
 import requests
 from datetime import datetime
 import psycopg2
+from dotenv import load_dotenv
 
+load_dotenv()
 # Connect to Postgres to fetch products
 conn = psycopg2.connect(
     dbname="birmas",
     user="birmas_user",
-    password="B1rm4sC4m3r4",
+    password="DB_PASSWORD",
     host="localhost",
     port="5432"
 )
