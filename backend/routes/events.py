@@ -35,8 +35,16 @@ async def post_event(ev: EventCreate, request: Request, db: Session = Depends(ge
 
         # Broadcast to WebSocket clients
         manager = request.app.state.manager
-        await manager.broadcast(ev.model_dump())
-
+        await manager.broadcast({
+            "id": new_event.id,
+            "camera_id": new_event.camera_id,
+            "ts": new_event.ts.isoformat(),
+            "label": new_event.label,
+            "bbox": new_event.bbox,
+            "confidence": new_event.confidence,
+            "product_brand": new_event.product_brand,
+            "product_name": new_event.product_name,
+        })
         return new_event
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -37,7 +37,11 @@ class EventBase(BaseModel):
     confidence: float
 
 class EventCreate(EventBase):
-    pass
+    camera_id: str
+    ts: Optional[datetime] = None
+    label: str
+    bbox: str
+    confidence: float
 
 class EventOut(EventBase):
     id: int
