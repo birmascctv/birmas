@@ -10,7 +10,7 @@ load_dotenv()
 conn = psycopg2.connect(
     dbname="birmas",
     user="birmas_user",
-    password=("DB_PASSWORD"),
+    password=os.getenv("DB_PASSWORD"),
     host="localhost",
     port="5432"
 )

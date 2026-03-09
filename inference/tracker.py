@@ -45,7 +45,7 @@ class ProductTracker:
             track_box = [x, y, x + w, y + h]
 
             # Match track to original detection by highest IoU
-            best_iou, best_cid, best_conf = 0.0, None
+            best_iou, best_cid, best_conf = 0.0, None, 0.0
             for d in detections:
                 iou = _iou(track_box, d[:4])
                 if iou > best_iou:

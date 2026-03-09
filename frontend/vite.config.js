@@ -20,6 +20,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/ws': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true
+      },
       '/stream': {
         target: 'http://localhost:8888', // ✅ matches your MediaMTX stream
         changeOrigin: true,
