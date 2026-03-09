@@ -4,20 +4,25 @@
 
 <script setup>
 import Hls from 'hls.js'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
   src: { type: String, required: true }
 })
 
 const v = ref(null)
+let hlsInstance = null
 
 const loadStream = (url) => {
   if (!v.value) return
+  if (hlsInstance) {
+    hlsInstance.destroy()
+    hlsInstance = null
+  }
   if (Hls.isSupported()) {
-    const h = new Hls()
-    h.loadSource(url)
-    h.attachMedia(v.value)
+    hlsInstance = new Hls()
+    hlsInstance.loadSource(url)
+    hlsInstance.attachMedia(v.value)
   } else {
     v.value.src = url
   }
@@ -25,6 +30,12 @@ const loadStream = (url) => {
 
 onMounted(() => loadStream(props.src))
 watch(() => props.src, (newSrc) => loadStream(newSrc))
+onUnmounted(() => {
+  if (hlsInstance) {
+    hlsInstance.destroy()
+    hlsInstance = null
+  }
+})
 </script>
 
 <style scoped>

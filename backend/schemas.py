@@ -36,7 +36,7 @@ class EventBase(BaseModel):
     product_name: str
     confidence: float
 
-class EventCreate(EventBase):
+class EventCreate(BaseModel):
     camera_id: str
     ts: Optional[datetime] = None
     label: str
