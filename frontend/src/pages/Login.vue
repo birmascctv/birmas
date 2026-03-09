@@ -26,6 +26,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import API from '../api'
 
 const username = ref('')
 const password = ref('')
@@ -44,19 +45,4 @@ const login = async () => {
   }
 }
 
-  const match = users.find(
-    u => u.username === username.value && u.password === password.value
-  )
-
-  if (match) {
-    if (rememberMe.value) {
-      localStorage.setItem('auth', 'true')
-    } else {
-      sessionStorage.setItem('auth', 'true')
-    }
-    router.push('/dashboard')
-  } else {
-    alert('Invalid credentials')
-  }
-}
 </script>

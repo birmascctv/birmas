@@ -102,7 +102,8 @@ const showAllCams = ref(false)
 
 const router = useRouter()
 const logout = () => {
-  localStorage.removeItem('auth')
+  localStorage.removeItem('auth_token')
+  sessionStorage.removeItem('auth_token')
   router.push('/login')
 }
 </script>

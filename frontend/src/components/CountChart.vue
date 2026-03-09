@@ -34,9 +34,6 @@ import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap'
 import API from '../api'
-import { watch } from 'vue'
-
-watch(() => [props.camera, props.filter], loadEvents)
 
 //declare filter props
 const props = defineProps({
@@ -52,6 +49,8 @@ const mode = ref('all')
 const drilledBrand = ref(null)
 let allData = []
 
+watch(() => [props.camera, props.filter], loadChartData)
+
 //convert filter value to date range
 function getStartDate(filter) {
   const now = new Date()
@@ -62,7 +61,11 @@ function getStartDate(filter) {
 
 async function loadChartData() {
   try {
-    const res = await API.get('/events?camera_id=cam1')
+    const res = await API.get('/events', {
+      params: {
+        start_date: getStartDate(props.filter),
+      }
+    })
     const events = Array.isArray(res.data) ? res.data : []
 
     // Build counts

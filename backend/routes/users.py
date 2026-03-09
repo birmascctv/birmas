@@ -1,8 +1,10 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import User
 from backend.schemas import UserCreate, UserLogin, UserOut
+from jose import jwt
 import bcrypt
 import logging
 
@@ -48,7 +50,4 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
     token = jwt.encode({"sub": str(db_user.id), "username": db_user.username}, SECRET_KEY, algorithm="HS256")
     return {"access_token": token, "token_type": "bearer"}
-
-    logger.info(f"User {user.username} logged in successfully (id={db_user.id})")
-    return db_user
 

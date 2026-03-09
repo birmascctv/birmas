@@ -28,7 +28,7 @@ class ProductTracker:
         if len(detections) == 0:
             return []
 
-        dets = np.array([
+        dets_np = np.array([
             [d[0], d[1], d[2], d[3], d[4]]
             for d in detections
         ])
@@ -54,6 +54,7 @@ class ProductTracker:
             results.append({
                 "track_id": t.track_id,
                 "class_id": best_cid,
+                "confidence": best_conf,
                 "bbox": track_box
             })
 

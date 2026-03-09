@@ -64,11 +64,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import API from '../api'
-import { watch } from 'vue'
-
-watch(() => [props.camera, props.filter], loadEvents)
 
 //declare filter props
 const props = defineProps({
@@ -80,6 +77,8 @@ const events = ref([])
 const currentPage = ref(1)
 const pageSize = 10
 
+watch(() => [props.camera, props.filter], loadEvents)
+
 //convert filter value to date range
 function getStartDate(filter) {
   const now = new Date()
@@ -90,13 +89,10 @@ function getStartDate(filter) {
 
 // Fetch events from backend
 async function loadEvents() {
-  try {
-    const res = await API.get('/events?camera_id=cam1')
-    console.log('Events response:', res.data)
-    events.value = res.data
-  } catch (err) {
-    console.error('Error loading events:', err)
-  }
+  const params = { start_date: getStartDate(props.filter) }
+  if (props.camera !== 'all') params.camera_id = props.camera
+  const res = await API.get('/events', { params })
+  events.value = res.data
 }
 loadEvents()
 
@@ -106,6 +102,7 @@ ws.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
   events.value.unshift(ev)  // prepend new event to top of table
 }
+onUnmounted(() => ws.close())
 
 // Pagination
 const totalPages = computed(() =>

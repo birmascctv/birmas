@@ -13,7 +13,7 @@
 **/Dockerfile.*.swp
 
 # Environment files
-*.env
+inference/.env
 .env
 
 # Logs
