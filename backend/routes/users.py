@@ -44,6 +44,11 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not bcrypt.checkpw(raw_pw, db_user.password_hash.encode("utf-8")):
         logger.warning(f"Failed login attempt for {user.username}")
         raise HTTPException(status_code=400, detail="Invalid credentials")
+    
+    SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
+    token = jwt.encode({"sub": str(db_user.id), "username": db_user.username}, SECRET_KEY, algorithm="HS256")
+    return {"access_token": token, "token_type": "bearer"}
 
     logger.info(f"User {user.username} logged in successfully (id={db_user.id})")
     return db_user
+

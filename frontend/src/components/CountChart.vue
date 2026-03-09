@@ -34,6 +34,15 @@ import { ref, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap'
 import API from '../api'
+import { watch } from 'vue'
+
+watch(() => [props.camera, props.filter], loadEvents)
+
+//declare filter props
+const props = defineProps({
+     camera: { type: String, default: 'cam1' },
+     filter: { type: String, default: 'day' }
+   })
 
 // ✅ Register Chart.js core + treemap plugin
 Chart.register(...registerables, TreemapController, TreemapElement)
@@ -42,6 +51,14 @@ const chartInstance = ref(null)
 const mode = ref('all')
 const drilledBrand = ref(null)
 let allData = []
+
+//convert filter value to date range
+function getStartDate(filter) {
+  const now = new Date()
+  const map = { day: 1, week: 7, month: 30, '3months': 90, year: 365 }
+  now.setDate(now.getDate() - (map[filter] || 1))
+  return now.toISOString()
+}
 
 async function loadChartData() {
   try {

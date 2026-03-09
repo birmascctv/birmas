@@ -32,11 +32,17 @@ const password = ref('')
 const rememberMe = ref(false)
 const router = useRouter()
 
-const login = () => {
-  const users = [
-    { username: 'admin', password: 'password' },
-    { username: 'eva', password: 'b1rm4s' }
-  ]
+const login = async () => {
+  try {
+    const res = await API.post('/users/login', { username: username.value, password: password.value })
+    const token = res.data.access_token
+    if (rememberMe.value) localStorage.setItem('auth_token', token)
+    else sessionStorage.setItem('auth_token', token)
+    router.push('/dashboard')
+  } catch {
+    alert('Invalid credentials')
+  }
+}
 
   const match = users.find(
     u => u.username === username.value && u.password === password.value

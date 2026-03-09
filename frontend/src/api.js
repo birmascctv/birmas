@@ -1,7 +1,13 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: 'http://170.64.149.147:8000/api'   // WireGuard IP + backend port
+  baseURL: '/api'
+})
+
+API.interceptors.request.use(config => {
+  const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
 })
 
 export default API

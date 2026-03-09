@@ -2,6 +2,18 @@ import numpy as np
 from types import SimpleNamespace
 from yolox_tracker.tracker.byte_tracker import BYTETracker
 
+def _iou(a, b):
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+    if inter == 0:
+        return 0.0
+    area_a = (ax2 - ax1) * (ay2 - ay1)
+    area_b = (bx2 - bx1) * (by2 - by1)
+    return inter / (area_a + area_b - inter)
+
 class ProductTracker:
     def __init__(self, fps=30):
         args = SimpleNamespace(
@@ -13,10 +25,6 @@ class ProductTracker:
         self.tracker = BYTETracker(args, frame_rate=fps)
 
     def update(self, detections, frame_shape):
-        """
-        detections: [x1, y1, x2, y2, score, class_id]
-        """
-
         if len(detections) == 0:
             return []
 
@@ -25,10 +33,8 @@ class ProductTracker:
             for d in detections
         ])
 
-        class_ids = [d[5] for d in detections]
-
         tracks = self.tracker.update(
-            dets,
+            dets_np,
             img_info=(frame_shape[0], frame_shape[1]),
             img_size=(640, 640)
         )
@@ -36,13 +42,19 @@ class ProductTracker:
         results = []
         for t in tracks:
             x, y, w, h = t.tlwh
-            idx = t.track_id - 1
-            cid = class_ids[idx] if idx < len(class_ids) else None
+            track_box = [x, y, x + w, y + h]
+
+            # Match track to original detection by highest IoU
+            best_iou, best_cid = 0.0, None
+            for d in detections:
+                iou = _iou(track_box, d[:4])
+                if iou > best_iou:
+                    best_iou, best_cid = iou, d[5]
 
             results.append({
                 "track_id": t.track_id,
-                "class_id": cid,
-                "bbox": [x, y, x + w, y + h]
+                "class_id": best_cid,
+                "bbox": track_box
             })
 
         return results

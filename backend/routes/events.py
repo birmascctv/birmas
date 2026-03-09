@@ -42,16 +42,14 @@ async def post_event(ev: EventCreate, request: Request, db: Session = Depends(ge
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/events", response_model=list[EventOut])
-async def get_events(camera_id: str, db: Session = Depends(get_db)):
-    try:
-        events = (
-            db.query(Event)
-            .filter(Event.camera_id == camera_id)
-            .order_by(Event.ts.desc())
-            .limit(100)
-            .all()
-        )
-        return events
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+async def get_events(
+    camera_id: str | None = None,
+    start_date: str | None = None,
+    db: Session = Depends(get_db)
+):
+    q = db.query(Event)
+    if camera_id:
+        q = q.filter(Event.camera_id == camera_id)
+    if start_date:
+        q = q.filter(Event.ts >= start_date)
+    return q.order_by(Event.ts.desc()).limit(500).all()

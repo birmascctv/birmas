@@ -66,10 +66,27 @@
 <script setup>
 import { ref, computed } from 'vue'
 import API from '../api'
+import { watch } from 'vue'
+
+watch(() => [props.camera, props.filter], loadEvents)
+
+//declare filter props
+const props = defineProps({
+     camera: { type: String, default: 'cam1' },
+     filter: { type: String, default: 'day' }
+   })
 
 const events = ref([])
 const currentPage = ref(1)
 const pageSize = 10
+
+//convert filter value to date range
+function getStartDate(filter) {
+  const now = new Date()
+  const map = { day: 1, week: 7, month: 30, '3months': 90, year: 365 }
+  now.setDate(now.getDate() - (map[filter] || 1))
+  return now.toISOString()
+}
 
 // Fetch events from backend
 async function loadEvents() {
@@ -82,6 +99,13 @@ async function loadEvents() {
   }
 }
 loadEvents()
+
+//connects to WebSocket
+const ws = new WebSocket(`ws://${window.location.host}/ws/events`)
+ws.onmessage = (msg) => {
+  const ev = JSON.parse(msg.data)
+  events.value.unshift(ev)  // prepend new event to top of table
+}
 
 // Pagination
 const totalPages = computed(() =>
