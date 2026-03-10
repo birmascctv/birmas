@@ -22,14 +22,37 @@ def now_wib():
 STREAM_URL     = os.getenv("STREAM_URL", "")
 API_ENDPOINT   = os.getenv("API_ENDPOINT", "")
 MODEL_PATH     = os.getenv("MODEL_PATH", "models/best.pt")
-INFER_INTERVAL = float(os.getenv("INFER_INTERVAL", "1"))  # min seconds between inferences
+INFER_INTERVAL = float(os.getenv("INFER_INTERVAL", "0"))  # min seconds between inferences (0 = max speed)
 LOG_TTL        = float(os.getenv("LOG_TTL", "10"))         # seconds before product marked sold
 STARTUP_GRACE  = 60.0  # first 60s: all new tracks are "added" (not "restock")
+
+def _parse_zone(env_val):
+    """Parse 'x1,y1,x2,y2' string into tuple or None."""
+    if not env_val:
+        return None
+    try:
+        x1, y1, x2, y2 = map(float, env_val.split(","))
+        return (x1, y1, x2, y2)
+    except Exception:
+        print(f"[WARN] Invalid zone format: {env_val!r} — expected 'x1,y1,x2,y2'")
+        return None
+
+def _in_zone(bbox, zone):
+    """Return True if bbox center is inside the zone rectangle."""
+    cx = (bbox[0] + bbox[2]) / 2
+    cy = (bbox[1] + bbox[3]) / 2
+    return zone[0] <= cx <= zone[2] and zone[1] <= cy <= zone[3]
+
+# Zone where products originate FROM the fridge (customer taking product).
+# Bounding box center inside this zone on first detection → event_type="added".
+# Outside this zone → event_type="restock" (product came from outside the fridge).
+# Set FRIDGE_ZONE="" to disable zone detection and fall back to same-class logic.
+FRIDGE_ZONE = _parse_zone(os.getenv("FRIDGE_ZONE", "560,0,780,230"))
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
 print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
-print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s")
+print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s  FRIDGE_ZONE={FRIDGE_ZONE}")
 
 IMG_SIZE = 640
 # ----------------------------------------
@@ -136,8 +159,16 @@ while True:
                         f"{obj['bbox'][2]:.1f},{obj['bbox'][3]:.1f}")
 
             if tid not in seen_tracks:
-                same_class_active = any(v["label"] == label for v in seen_tracks.values())
-                event_type = "added" if (in_startup or not same_class_active) else "restock"
+                if in_startup:
+                    event_type = "added"
+                elif FRIDGE_ZONE is not None:
+                    # Zone-based: product appeared from fridge area = customer taking product
+                    # Product appeared from outside fridge = restock
+                    event_type = "added" if _in_zone(obj["bbox"], FRIDGE_ZONE) else "restock"
+                else:
+                    # Fallback: first of this class = added, duplicate class = restock
+                    same_class_active = any(v["label"] == label for v in seen_tracks.values())
+                    event_type = "added" if not same_class_active else "restock"
                 post_event(event_type, label, bbox, float(obj["confidence"]))
                 print(f"[{event_type.upper()}] {label} (track {tid})")
                 seen_tracks[tid] = {"last_seen": now, "label": label}

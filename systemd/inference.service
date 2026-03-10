@@ -9,8 +9,9 @@ ExecStart=/home/birmas1/birmas/venv311/bin/python -u /home/birmas1/birmas/infere
 Environment="STREAM_URL=rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101"
 Environment="API_ENDPOINT=http://10.0.0.1:8000/api/events"
 Environment="MODEL_PATH=./models/best.pt"
-Environment="INFER_INTERVAL=1"
+Environment="INFER_INTERVAL=0"
 Environment="LOG_TTL=10"
+Environment="FRIDGE_ZONE=560,0,780,230"
 Restart=always
 RestartSec=5
 StandardOutput=journal
