@@ -54,22 +54,21 @@ while True:
         time.sleep(1)
         continue
 
+    for _ in range(10):
+        cap.grab()
+
     ok, frame = cap.read()
     if not ok:
         print("[WARN] Failed to read frame, reconnecting...")
         cap.release()
         cap = open_stream(STREAM_URL)
+        time.sleep(2)
         continue
-
-    if frame_count == 0:
-        print("[INFO] First frame received from stream")
-        cv2.imwrite("debug_first_frame.jpg", frame)
 
     frame_count += 1
-
-    # -------- FRAME-BASED THROTTLE --------
-    if frame_count % FRAME_SKIP != 0:
-        continue
+    if frame_count == 1:
+        print("[INFO] First frame received from stream")
+        cv2.imwrite("debug_first_frame.jpg", frame)
 
     try:
         # -------- YOLO --------
@@ -106,7 +105,7 @@ while True:
                 payload = {
                     "camera_id": "cam1",
                     "ts": datetime.utcnow().isoformat(),
-                    "label": label,
+                    "label": ,
                     "bbox": bbox,
                     "confidence": float(obj["confidence"])
                 }
@@ -143,4 +142,5 @@ while True:
 
     except Exception as e:
         print("Error:", e)
-        time.sleep(1)
+    
+    time.sleep(INFER_INTERVAL)
