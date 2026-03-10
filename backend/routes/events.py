@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
-from backend.models import Event, Product
+from backend.models import Event, Product, now_wib
 from backend.schemas import EventCreate, EventOut
-from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -23,7 +22,7 @@ async def post_event(ev: EventCreate, request: Request, db: Session =
 
         new_event = Event(
             camera_id     = ev.camera_id,
-            ts            = ev.ts if ev.ts else datetime.now(timezone.utc),
+        ts            = ev.ts.replace(tzinfo=None) if ev.ts else now_wib(),
             label         = ev.label,
             bbox          = ev.bbox,
             confidence    = ev.confidence,

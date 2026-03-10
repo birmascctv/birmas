@@ -1,0 +1,19 @@
+[Unit]
+Description=Birmas Inference Service
+After=network.target
+
+[Service]
+User=birmas1
+WorkingDirectory=/home/birmas1/birmas/inference
+ExecStart=/home/birmas1/birmas/venv311/bin/python -u /home/birmas1/birmas/inference/main.py
+Environment="STREAM_URL=rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101"
+Environment="API_ENDPOINT=http://10.0.0.1:8000/api/events"
+Environment="MODEL_PATH=./models/best.pt"
+Environment="INFER_INTERVAL=5"
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

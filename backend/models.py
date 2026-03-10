@@ -1,6 +1,13 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float
 from backend.db import Base
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+# Jakarta timezone (WIB = UTC+7) — used as default for timestamps
+WIB = timezone(timedelta(hours=7))
+
+def now_wib():
+    """Current naive datetime in Jakarta local time (WIB)."""
+    return datetime.now(WIB).replace(tzinfo=None)
 
 class User(Base):
     __tablename__ = "users"
@@ -12,8 +19,7 @@ class Event(Base):
     __tablename__ = "events"
     id            = Column(Integer, primary_key=True, index=True,
         autoincrement=True)
-    ts            = Column(DateTime(timezone=True), default=lambda:
-        datetime.now(timezone.utc), index=True)
+    ts            = Column(DateTime, default=now_wib, index=True)  # stored as naive WIB (Jakarta local time)
     camera_id     = Column(String, index=True)
     label         = Column(String)
     bbox          = Column(String)

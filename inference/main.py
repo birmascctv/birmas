@@ -2,13 +2,20 @@ import sys, os
 import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
 
 print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
+
+# Jakarta timezone (WIB = UTC+7)
+WIB = timezone(timedelta(hours=7))
+
+def now_wib():
+    """Current naive datetime in Jakarta local time (WIB, UTC+7)."""
+    return datetime.now(WIB).replace(tzinfo=None)
 
 # ---------------- CONFIG ----------------
 STREAM_URL      = os.getenv("STREAM_URL", "")
@@ -51,7 +58,7 @@ start_time  = time.time()
 def post_event(event_type: str, label: str, bbox: str, confidence: float):
     payload = {
         "camera_id":  "cam1",
-        "ts":         datetime.now(timezone.utc).isoformat(),
+        "ts":         now_wib().isoformat(),
         "label":      label,
         "bbox":       bbox,
         "confidence": confidence,

@@ -1,0 +1,16 @@
+[Unit]
+Description=FFmpeg Publisher Camera to Server MediaMTX
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/ffmpeg \
+  -rtsp_transport tcp \
+  -i rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/102 \
+  -c:v copy \
+  -rtsp_transport tcp \
+  -f rtsp rtsp://10.0.0.1:8554/cam1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
