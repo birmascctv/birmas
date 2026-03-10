@@ -2,7 +2,7 @@ import sys, os
 import time, cv2, requests
 from ultralytics import YOLO
 from tracker import ProductTracker
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,17 +11,19 @@ print(f"[DEBUG] Running file: {__file__}")
 print(f"[DEBUG] Python executable: {sys.executable}")
 
 # ---------------- CONFIG ----------------
-STREAM_URL = os.getenv("STREAM_URL", "")
-API_ENDPOINT = os.getenv("API_ENDPOINT", "")   # <-- match backend route
-MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
+STREAM_URL      = os.getenv("STREAM_URL", "")
+API_ENDPOINT    = os.getenv("API_ENDPOINT", "")
+MODEL_PATH      = os.getenv("MODEL_PATH", "models/best.pt")
+INFER_INTERVAL  = float(os.getenv("INFER_INTERVAL", "5"))   # seconds between inferences
+STARTUP_GRACE   = 60.0   # first 60s: all new tracks are "added", not "restock"
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
 print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
+print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s")
 
-IMG_SIZE = 640        # inference image size
-FRAME_SKIP = 15       # infer every 15th frame
-LOG_TTL = 8           # seconds (product removed timeout)
+IMG_SIZE  = 640
+LOG_TTL   = max(INFER_INTERVAL * 4, 20)  # at least 4× interval, min 20s
 # ----------------------------------------
 
 def open_stream(url):
@@ -30,7 +32,7 @@ def open_stream(url):
     if not cap.isOpened():
         print(f"[ERROR] Unable to open stream: {url}")
         return None
-    print(f"[INFO] Stream opened successfully: {url}")
+    print(f"[INFO] Stream opened: {url}")
     return cap
 
 cap = open_stream(STREAM_URL)
@@ -41,19 +43,34 @@ model.model.eval()
 print("Model loaded:", model.names)
 
 # ---------------- INIT TRACKER ----------------
-tracker = ProductTracker(fps=30)
-
-seen_tracks = {}
+tracker   = ProductTracker(fps=30)
+seen_tracks = {}        # {track_id: {"last_seen": float, "label": str}}
 frame_count = 0
+start_time  = time.time()
+
+def post_event(event_type: str, label: str, bbox: str, confidence: float):
+    payload = {
+        "camera_id":  "cam1",
+        "ts":         datetime.now(timezone.utc).isoformat(),
+        "label":      label,
+        "bbox":       bbox,
+        "confidence": confidence,
+        "event_type": event_type,
+    }
+    try:
+        requests.post(API_ENDPOINT, json=payload, timeout=2)
+    except Exception as e:
+        print(f"[ERROR] post {event_type} for {label}: {e}")
 
 # ---------------- MAIN LOOP ----------------
 while True:
     if cap is None or not cap.isOpened():
         print("[WARN] Stream not opened, retrying...")
         cap = open_stream(STREAM_URL)
-        time.sleep(1)
+        time.sleep(2)
         continue
 
+    # Drain the buffer so we always infer the latest frame
     for _ in range(10):
         cap.grab()
 
@@ -67,80 +84,64 @@ while True:
 
     frame_count += 1
     if frame_count == 1:
-        print("[INFO] First frame received from stream")
+        print("[INFO] First frame received")
         cv2.imwrite("debug_first_frame.jpg", frame)
 
     try:
         # -------- YOLO --------
-        res = model.predict(
-            frame,
-            imgsz=IMG_SIZE,
-            conf=0.35,
-            iou=0.45,
-            verbose=False
-        )[0]
+        res = model.predict(frame, imgsz=IMG_SIZE, conf=0.35, iou=0.45,
+            verbose=False)[0]
 
         detections = []
         for b in res.boxes:
             x1, y1, x2, y2 = b.xyxy[0].tolist()
-            detections.append([
-                x1, y1, x2, y2,
-                float(b.conf),
-                int(b.cls)
-            ])
+            detections.append([x1, y1, x2, y2, float(b.conf), int(b.cls)])
+
         print(f"[DEBUG] Frame {frame_count}: {len(detections)} detections")
 
         # -------- BYTETRACK --------
         tracked = tracker.update(detections, frame.shape)
+        now     = time.time()
+        in_startup = (now - start_time) < STARTUP_GRACE
 
-        # -------- PRODUCT ADDED --------
-        now = time.time()
+        # -------- PRODUCT ADDED / RESTOCK --------
         for obj in tracked:
-            tid = obj["track_id"]
+            tid      = obj["track_id"]
             class_id = obj["class_id"]
-            label = model.names[class_id] if class_id is not None else "unknown"
-            bbox = f"{obj['bbox'][0]},{obj['bbox'][1]},{obj['bbox'][2]},{obj['bbox'][3]}"
+            label    = model.names[class_id] if class_id is not None else "unknown"
+            bbox     = (f"{obj['bbox'][0]:.1f},{obj['bbox'][1]:.1f},"
+                        f"{obj['bbox'][2]:.1f},{obj['bbox'][3]:.1f}")
 
             if tid not in seen_tracks:
-                payload = {
-                    "camera_id": "cam1",
-                    "ts": datetime.utcnow().isoformat(),
-                    "label": ,
-                    "bbox": bbox,
-                    "confidence": float(obj["confidence"])
-                }
-                try:
-                    requests.post(API_ENDPOINT, json=payload, timeout=2)
-                    print(f"+ ADDED {label} (ID {tid})")
-                except Exception as e:
-                    print("[ERROR] Failed to post event:", e)
+                same_class_active = any(v["label"] == label for v in seen_tracks.values())
 
-                seen_tracks[tid] = {
-                    "last_seen": now,
-                    "label": label
-                }
+                if in_startup:
+                    # During startup: everything already on counter is just "added"
+                    event_type = "added"
+                elif same_class_active:
+                    # After startup: more of same product appeared → restock
+                    event_type = "restock"
+                else:
+                    # First of this product type in scene
+                    event_type = "added"
+
+                post_event(event_type, label, bbox, float(obj["confidence"]))
+                print(f"[{event_type.upper()}] {label} (track {tid})")
+                seen_tracks[tid] = {"last_seen": now, "label": label}
             else:
                 seen_tracks[tid]["last_seen"] = now
 
-        # -------- PRODUCT REMOVED --------
+        # -------- PRODUCT SOLD --------
         for tid in list(seen_tracks.keys()):
             if now - seen_tracks[tid]["last_seen"] > LOG_TTL:
-                payload = {
-                    "camera_id": "cam1",
-                    "ts": datetime.utcnow().isoformat(),
-                    "label": seen_tracks[tid]["label"],
-                    "bbox": "",   # no bbox on removal
-                    "confidence": 0.0
-                }
-                try:
-                    requests.post(API_ENDPOINT, json=payload, timeout=2)
-                    print(f"- REMOVED {seen_tracks[tid]['label']} (ID {tid})")
-                except Exception as e:
-                    print("[ERROR] Failed to post removal:", e)
-
+                label = seen_tracks[tid]["label"]
+                post_event("sold", label, "", 0.0)
+                print(f"[SOLD] {label} (track {tid})")
                 del seen_tracks[tid]
 
     except Exception as e:
-        print("Error:", e)
-    
+        print(f"[ERROR] {e}")
+        time.sleep(1)
+
+    # Wait before next inference
     time.sleep(INFER_INTERVAL)

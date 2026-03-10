@@ -1,10 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
-# -------------------
-# User Schemas
-# -------------------
 class UserBase(BaseModel):
     username: str
 
@@ -16,7 +13,6 @@ class UserLogin(UserBase):
 
 class UserOut(UserBase):
     id: int
-
     class Config:
         from_attributes = True
 
@@ -24,27 +20,25 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str
 
-# -------------------
-# Event Schemas
-# -------------------
-class EventBase(BaseModel):
-    camera_id: str
-    ts: datetime
-    label: str
-    bbox: str
-    product_brand: str
-    product_name: str
-    confidence: float
-
 class EventCreate(BaseModel):
-    camera_id: str
-    ts: Optional[datetime] = None
-    label: str
-    bbox: str
+    camera_id:  str
+    ts:         Optional[datetime] = None
+    label:      str
+    bbox:       str
     confidence: float
+    event_type: Optional[str] = "added"   # "added" | "restock" | "sold"
+
+class EventBase(BaseModel):
+    camera_id:    str
+    ts:           datetime
+    label:        str
+    bbox:         str
+    product_brand: str
+    product_name:  str
+    confidence:   float
+    event_type:   str
 
 class EventOut(EventBase):
     id: int
-
     class Config:
         from_attributes = True
