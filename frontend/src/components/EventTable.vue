@@ -8,9 +8,8 @@
       </button>
     </div>
 
-    <div class="overflow-x-auto">
-    <table v-if="paginatedEvents && paginatedEvents.length"
-           class="text-sm w-full border-collapse text-center min-w-[480px]">
+    <div class="overflow-x-auto" v-if="paginatedEvents && paginatedEvents.length">
+    <table class="text-sm w-full border-collapse text-center min-w-[480px]">
       <thead>
         <tr>
           <th class="border px-3 py-2 bg-slate-100">Time</th>

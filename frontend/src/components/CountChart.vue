@@ -50,9 +50,9 @@
       </div>
     </div>
 
-    <!-- Chart container -->
-    <div class="relative flex-1 min-h-0">
-      <canvas ref="chartCanvas" class="w-full h-full"></canvas>
+    <!-- Chart container: explicit height so Chart.js always gets a non-zero canvas size -->
+    <div class="relative" style="height: 360px; min-height: 300px;">
+      <canvas ref="chartCanvas" style="width:100%;height:100%;"></canvas>
       <div v-if="loading"
            class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60">
         <span class="text-sm text-gray-400 animate-pulse">Loading…</span>
@@ -261,10 +261,10 @@ async function loadChartData() {
     // ── Top 10 Least Sold Products (horizontal bar) ──────────────────────────
     } else if (mode.value === 'top10least') {
       // Count sold events per product; show 10 with lowest sold count (incl. 0)
-      const seenProducts = {}  // key → { brand, name, sold }
+      const seenProducts = {}  // "brand — name" → { sold }
       events.forEach(ev => {
-        const key = ev.product_name || 'Unnamed'
-        if (!seenProducts[key]) seenProducts[key] = { brand: ev.product_brand || 'Unknown', sold: 0 }
+        const key = `${ev.product_brand || 'Unknown'} — ${ev.product_name || 'Unnamed'}`
+        if (!seenProducts[key]) seenProducts[key] = { sold: 0 }
         if (ev.event_type === 'sold') seenProducts[key].sold++
       })
       const sorted = Object.entries(seenProducts)
@@ -272,7 +272,7 @@ async function loadChartData() {
         .slice(0, 10)
       if (!sorted.length) { emptyData.value = true; loading.value = false; return }
 
-      const labels = sorted.map(([name, d]) => `${d.brand} — ${name}`)
+      const labels = sorted.map(([key]) => key)
       const data   = sorted.map(([, d]) => d.sold)
       const colors = labels.map((_, i) => brandColor(i))
 
@@ -296,24 +296,23 @@ async function loadChartData() {
     // ── Dead Stock ────────────────────────────────────────────────────────────
     } else if (mode.value === 'deadstock') {
       // Products seen in events but with ZERO sold events in last 3 months
-      const seenMap = {}  // product_name → { brand, detected, lastSeen }
+      const seenMap = {}  // "brand — name" → { detected }
       const soldSet  = new Set()
 
       events.forEach(ev => {
-        const key = ev.product_name || 'Unnamed'
-        if (!seenMap[key]) seenMap[key] = { brand: ev.product_brand || 'Unknown', detected: 0, lastSeen: ev.ts }
+        const key = `${ev.product_brand || 'Unknown'} — ${ev.product_name || 'Unnamed'}`
+        if (!seenMap[key]) seenMap[key] = { detected: 0 }
         seenMap[key].detected++
-        if (ev.ts > seenMap[key].lastSeen) seenMap[key].lastSeen = ev.ts
         if (ev.event_type === 'sold') soldSet.add(key)
       })
 
       const deadstock = Object.entries(seenMap)
-        .filter(([name]) => !soldSet.has(name))
+        .filter(([key]) => !soldSet.has(key))
         .sort((a, b) => b[1].detected - a[1].detected)
 
       if (!deadstock.length) { emptyData.value = true; loading.value = false; return }
 
-      const labels = deadstock.map(([name, d]) => `${d.brand} — ${name}`)
+      const labels = deadstock.map(([key]) => key)
       const data   = deadstock.map(([, d]) => d.detected)
       const colors = labels.map(() => '#94a3b8')  // slate — "stale" colour
 
