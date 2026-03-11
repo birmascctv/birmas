@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1">
+  <div class="flex-1 flex flex-col min-h-0">
     <!-- Export CSV button -->
     <div class="flex justify-end mb-2">
       <button @click="exportCSV"
@@ -8,8 +8,9 @@
       </button>
     </div>
 
+    <div class="overflow-x-auto">
     <table v-if="paginatedEvents && paginatedEvents.length"
-           class="text-sm w-full border-collapse text-center">
+           class="text-sm w-full border-collapse text-center min-w-[480px]">
       <thead>
         <tr>
           <th class="border px-3 py-2 bg-slate-100">Time</th>
@@ -49,6 +50,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
 
     <div v-else class="text-center text-slate-400 py-10">No data available</div>
 

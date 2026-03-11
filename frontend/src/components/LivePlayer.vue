@@ -2,14 +2,14 @@
   <div class="relative w-full h-full">
     <video ref="v" class="video-player" controls autoplay muted playsinline></video>
 
-    <!-- LIVE badge — shown when stream is actively playing -->
+    <!-- LIVE badge -->
     <div v-if="!isOffline"
          class="absolute top-2 left-2 flex items-center gap-1 bg-black bg-opacity-50 px-2 py-0.5 rounded text-white text-xs pointer-events-none">
       <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
       LIVE
     </div>
 
-    <!-- Offline overlay — ONLY shown on actual fatal stream errors, not buffering -->
+    <!-- Offline overlay -->
     <div v-if="isOffline"
          class="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center text-white text-sm gap-2 pointer-events-none">
       <svg class="w-8 h-8 opacity-60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -31,18 +31,27 @@ const props = defineProps({
 
 const v = ref(null)
 const isOffline = ref(false)
-let hlsInstance = null
+let hlsInstance      = null
 let liveEdgeInterval = null
-let retryDelay = 3000
+let retryDelay       = 3000
 
-const loadStream = (url) => {
+// Build direct mediamtx URL to bypass the Vite proxy.
+// Using the proxy for long-lived HLS segment fetches can cause
+// net::ERR_NETWORK_CHANGED when the Vite connection pool resets.
+function directUrl(path) {
+  // path is like "/stream/cam1/index.m3u8" → "/cam1/index.m3u8"
+  const stripped = path.replace(/^\/stream/, '')
+  return `http://${window.location.hostname}:8888${stripped}`
+}
+
+const loadStream = (src) => {
   if (!v.value) return
-
-  // Clear offline state immediately — let HLS.js be the only one to set it
   isOffline.value = false
 
-  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
+  if (hlsInstance)      { hlsInstance.destroy();      hlsInstance      = null }
   if (liveEdgeInterval) { clearInterval(liveEdgeInterval); liveEdgeInterval = null }
+
+  const url = directUrl(src)
 
   if (!Hls.isSupported()) {
     v.value.src = url
@@ -51,19 +60,22 @@ const loadStream = (url) => {
 
   hlsInstance = new Hls({
     lowLatencyMode:              false,
-    liveSyncDurationCount:       3,    // 3 segments behind live — adapts to segment size
+    liveSyncDurationCount:       3,    // 3 segments behind live edge (~9s with 3s segs)
     liveMaxLatencyDurationCount: 8,    // jump forward if >8 segments behind
-    maxBufferLength:             30,
+    maxBufferLength:             20,
     liveBackBufferLength:        3,
     enableWorker:                true,
-    fragLoadingMaxRetry:         2,    // fail fast on 404 so we reload immediately
-    manifestLoadingMaxRetry:     4,
-    levelLoadingMaxRetry:        4,
+    fragLoadingMaxRetry:         2,
+    manifestLoadingMaxRetry:     6,
+    levelLoadingMaxRetry:        6,
+    // Faster retry on network errors (ERR_NETWORK_CHANGED)
+    fragLoadingRetryDelay:       500,
+    manifestLoadingRetryDelay:   500,
   })
+
   hlsInstance.loadSource(url)
   hlsInstance.attachMedia(v.value)
 
-  // Stream confirmed alive — clear offline overlay and reset retry counter
   hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
     retryDelay = 3000
     isOffline.value = false
@@ -71,57 +83,83 @@ const loadStream = (url) => {
   })
 
   hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
-    // Fragment 404 means the Pi reconnected and mediamtx created a new session ID.
-    // Old segment URLs are gone — reload the stream immediately to get fresh URLs.
+    // Segment 404: Pi reconnected → mediamtx has new session ID → reload immediately
     if (
-      data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+      data.type    === Hls.ErrorTypes.NETWORK_ERROR &&
       data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR &&
       (data.response?.code === 404 || data.networkDetails?.status === 404)
     ) {
-      hlsInstance.destroy()
-      hlsInstance = null
+      hlsInstance.destroy(); hlsInstance = null
       retryDelay = 3000
-      setTimeout(() => loadStream(url), 1000)
+      setTimeout(() => loadStream(src), 1000)
       return
     }
 
-    if (!data.fatal) return  // ignore all other non-fatal events
+    // Non-fatal: HLS.js will retry internally
+    if (!data.fatal) return
 
     isOffline.value = true
+
     if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
       hlsInstance.recoverMediaError()
     } else {
-      hlsInstance.destroy()
-      hlsInstance = null
-      setTimeout(() => loadStream(url), retryDelay)
+      hlsInstance.destroy(); hlsInstance = null
+      setTimeout(() => loadStream(src), retryDelay)
       retryDelay = Math.min(retryDelay * 2, 15000)
     }
   })
 
-  // Belt-and-suspenders: clear overlay as soon as video starts playing
   v.value.addEventListener('playing', () => { isOffline.value = false }, { once: false })
 
+  // Jump to live edge if viewer drifted too far behind
   liveEdgeInterval = setInterval(() => {
     if (v.value && hlsInstance && hlsInstance.liveSyncPosition != null) {
-      if (v.value.currentTime < hlsInstance.liveSyncPosition - 20) {
+      if (v.value.currentTime < hlsInstance.liveSyncPosition - 30) {
         v.value.currentTime = hlsInstance.liveSyncPosition
       }
     }
   }, 15000)
 }
 
-onMounted(() => loadStream(props.src))
+// Reload stream on network recovery (fixes net::ERR_NETWORK_CHANGED)
+function onNetworkOnline() {
+  if (props.src) {
+    retryDelay = 3000
+    loadStream(props.src)
+  }
+}
+
+// Reload stream when tab becomes visible again after being hidden
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    // If video is paused or buffering, reload
+    if (v.value && (v.value.paused || v.value.readyState < 2)) {
+      retryDelay = 3000
+      loadStream(props.src)
+    }
+  }
+}
+
+onMounted(() => {
+  loadStream(props.src)
+  window.addEventListener('online', onNetworkOnline)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
 watch(() => props.src, (newSrc) => { retryDelay = 3000; loadStream(newSrc) })
+
 onUnmounted(() => {
   if (liveEdgeInterval) clearInterval(liveEdgeInterval)
-  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
+  if (hlsInstance)      { hlsInstance.destroy(); hlsInstance = null }
+  window.removeEventListener('online', onNetworkOnline)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 
 <style scoped>
 .video-player {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  width:       100%;
+  height:      100%;
+  object-fit:  contain;
 }
 </style>

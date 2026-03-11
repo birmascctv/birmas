@@ -1,19 +1,19 @@
 <template>
-  <div class="grid grid-cols-3 gap-3 mb-5">
+  <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
     <!-- Detected Today -->
-    <div class="bg-white rounded-lg shadow-sm border border-red-200 p-4 flex flex-col items-start">
-      <span class="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Detected Today</span>
-      <span class="text-3xl font-bold text-red-700">{{ counts.added }}</span>
+    <div class="bg-white rounded-lg shadow-sm border border-red-200 p-2 sm:p-4 flex flex-col items-start">
+      <span class="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1 leading-tight">Detected</span>
+      <span class="text-2xl sm:text-3xl font-bold text-red-700">{{ counts.added }}</span>
     </div>
     <!-- Sold Today -->
-    <div class="bg-white rounded-lg shadow-sm border border-green-200 p-4 flex flex-col items-start">
-      <span class="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Sold Today</span>
-      <span class="text-3xl font-bold text-green-700">{{ counts.sold }}</span>
+    <div class="bg-white rounded-lg shadow-sm border border-green-200 p-2 sm:p-4 flex flex-col items-start">
+      <span class="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1 leading-tight">Sold</span>
+      <span class="text-2xl sm:text-3xl font-bold text-green-700">{{ counts.sold }}</span>
     </div>
     <!-- Restocked Today -->
-    <div class="bg-white rounded-lg shadow-sm border border-blue-200 p-4 flex flex-col items-start">
-      <span class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Restocked Today</span>
-      <span class="text-3xl font-bold text-blue-700">{{ counts.restock }}</span>
+    <div class="bg-white rounded-lg shadow-sm border border-blue-200 p-2 sm:p-4 flex flex-col items-start">
+      <span class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1 leading-tight">Restocked</span>
+      <span class="text-2xl sm:text-3xl font-bold text-blue-700">{{ counts.restock }}</span>
     </div>
   </div>
 </template>

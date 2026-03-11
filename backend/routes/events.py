@@ -55,9 +55,10 @@ async def post_event(ev: EventCreate, request: Request, db: Session =
 async def get_events(
     camera_id:  str | None = None,
     start_date: str | None = None,
-    end_date:   str | None = None,
-    event_type: str | None = None,
-    limit:      int = 500,
+    end_date:     str | None = None,
+    event_type:   str | None = None,
+    product_name: str | None = None,
+    limit:        int = 500,
     db: Session = Depends(get_db)
 ):
     q = db.query(Event)
@@ -69,6 +70,8 @@ async def get_events(
         q = q.filter(Event.ts <= end_date)
     if event_type:
         q = q.filter(Event.event_type == event_type)
+    if product_name:
+        q = q.filter(Event.product_name == product_name)
     return q.order_by(Event.ts.desc()).limit(min(limit, 5000)).all()
 
 
@@ -81,3 +84,18 @@ async def camera_status():
         return {"cameras": cameras}
     except Exception:
         return {"cameras": []}
+
+@router.get("/products")
+async def get_products(db: Session = Depends(get_db)):
+    """Return all products from the product table."""
+    from backend.models import Product
+    products = db.query(Product).order_by(Product.product_brand, Product.product_name).all()
+    return [
+        {
+            "class_id":      p.class_id,
+            "class_name":    p.class_name,
+            "product_brand": p.product_brand,
+            "product_name":  p.product_name,
+        }
+        for p in products
+    ]
