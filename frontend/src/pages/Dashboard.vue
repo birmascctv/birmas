@@ -73,10 +73,18 @@
         <input type="date" v-model="customTo"
                class="h-7 px-2 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800" />
       </template>
-      <button @click="showAllCams = !showAllCams"
-              class="ml-auto px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-medium border border-red-700">
-        {{ showAllCams ? 'Selected Cam Only' : 'All Cams' }}
-      </button>
+      <!-- Slide toggle: OFF = Selected Cam, ON = All Cams -->
+      <div class="ml-auto flex items-center gap-2 select-none">
+        <span class="text-sm font-medium" :class="!showAllCams ? 'text-red-600' : 'text-gray-400'">Selected Cam</span>
+        <button @click="showAllCams = !showAllCams"
+                role="switch" :aria-checked="showAllCams"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                :class="showAllCams ? 'bg-red-600' : 'bg-gray-300'">
+          <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                :class="showAllCams ? 'translate-x-6' : 'translate-x-1'"></span>
+        </button>
+        <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">All Cams</span>
+      </div>
     </div>
 
     <!-- Bottom Section -->

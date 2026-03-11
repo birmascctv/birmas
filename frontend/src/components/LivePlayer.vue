@@ -50,29 +50,43 @@ const loadStream = (url) => {
   }
 
   hlsInstance = new Hls({
-    lowLatencyMode:         false,
-    liveSyncDuration:       4,     // play 4s behind live (~2 segments)
-    liveMaxLatencyDuration: 15,
-    maxBufferLength:        10,
-    liveBackBufferLength:   3,
-    enableWorker:           true,
-    fragLoadingMaxRetry:    4,
-    manifestLoadingMaxRetry: 4,
-    levelLoadingMaxRetry:   4,
+    lowLatencyMode:              false,
+    liveSyncDurationCount:       3,    // 3 segments behind live — adapts to segment size
+    liveMaxLatencyDurationCount: 8,    // jump forward if >8 segments behind
+    maxBufferLength:             30,
+    liveBackBufferLength:        3,
+    enableWorker:                true,
+    fragLoadingMaxRetry:         2,    // fail fast on 404 so we reload immediately
+    manifestLoadingMaxRetry:     4,
+    levelLoadingMaxRetry:        4,
   })
   hlsInstance.loadSource(url)
   hlsInstance.attachMedia(v.value)
 
-  // Stream confirmed alive — clear offline overlay
+  // Stream confirmed alive — clear offline overlay and reset retry counter
   hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
     retryDelay = 3000
     isOffline.value = false
     v.value?.play().catch(() => {})
   })
 
-  // Only fatal errors should show the offline overlay — NOT normal buffering/waiting
   hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
-    if (!data.fatal) return   // non-fatal (e.g. brief 404 on a rolled-off segment) = ignore
+    // Fragment 404 means the Pi reconnected and mediamtx created a new session ID.
+    // Old segment URLs are gone — reload the stream immediately to get fresh URLs.
+    if (
+      data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+      data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR &&
+      (data.response?.code === 404 || data.networkDetails?.status === 404)
+    ) {
+      hlsInstance.destroy()
+      hlsInstance = null
+      retryDelay = 3000
+      setTimeout(() => loadStream(url), 1000)
+      return
+    }
+
+    if (!data.fatal) return  // ignore all other non-fatal events
+
     isOffline.value = true
     if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
       hlsInstance.recoverMediaError()
@@ -80,7 +94,7 @@ const loadStream = (url) => {
       hlsInstance.destroy()
       hlsInstance = null
       setTimeout(() => loadStream(url), retryDelay)
-      retryDelay = Math.min(retryDelay * 2, 30000)
+      retryDelay = Math.min(retryDelay * 2, 15000)
     }
   })
 
