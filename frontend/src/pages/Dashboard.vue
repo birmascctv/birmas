@@ -1,15 +1,32 @@
 <template>
-  <div class="dashboard bg-gray-50 min-h-screen px-3 sm:px-5 lg:px-10 py-4 text-gray-800">
+  <div class="dashboard bg-gray-50 dark:bg-gray-900 min-h-screen px-3 sm:px-5 lg:px-10 py-4 text-gray-800 dark:text-gray-100 transition-colors">
 
     <!-- Header -->
-    <header class="flex items-center justify-between mb-4">
+    <header class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-xl sm:text-2xl font-bold text-red-600 tracking-wide">Birmas</h1>
-      <div class="flex items-center gap-2">
-        <!-- Idle warning -->
-        <span v-if="idleWarning"
-              class="text-xs text-amber-600 font-medium animate-pulse hidden sm:inline">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span v-if="idleWarning" class="text-xs text-amber-500 font-medium animate-pulse hidden sm:inline">
           Idle — logging out soon
         </span>
+
+        <!-- Dark / Light mode toggle -->
+        <div class="flex items-center gap-1.5 select-none">
+          <!-- Sun icon -->
+          <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 15a5 5 0 100-10 5 5 0 000 10zm7.07-12.07a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM21 11h1a1 1 0 110 2h-1a1 1 0 110-2zm-2.93 7.07a1 1 0 01-1.41 0l-.71-.71a1 1 0 011.41-1.41l.71.71a1 1 0 010 1.41zM12 20a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-7.07-2.93a1 1 0 010-1.41l.71-.71a1 1 0 111.41 1.41l-.71.71a1 1 0 01-1.41 0zM3 11h1a1 1 0 110 2H3a1 1 0 110-2zm1.93-7.07a1 1 0 011.41 0l.71.71a1 1 0 01-1.41 1.41l-.71-.71a1 1 0 010-1.41z"/>
+          </svg>
+          <button @click="dark = !dark" role="switch" :aria-checked="dark"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                  :class="dark ? 'bg-indigo-600' : 'bg-gray-300'">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                  :class="dark ? 'translate-x-6' : 'translate-x-1'"></span>
+          </button>
+          <!-- Moon icon -->
+          <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+          </svg>
+        </div>
+
         <button @click="logout"
                 class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-medium">
           Logout
@@ -20,11 +37,11 @@
     <!-- Camera Section -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4 items-stretch">
       <!-- Selected Camera Player -->
-      <div class="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-2 mb-2 flex-wrap">
           <h2 class="text-base sm:text-lg font-semibold text-red-600">Selected Camera</h2>
           <select v-model="selectedCam"
-                  class="ml-auto w-36 h-7 px-2 py-0.5 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800">
+                  class="ml-auto w-36 h-7 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
             <option v-for="cam in cameras" :key="cam.id" :value="cam.id">{{ cam.name }}</option>
           </select>
         </div>
@@ -35,21 +52,21 @@
         </div>
       </div>
 
-      <!-- All Cameras Grid -->
-      <div class="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200">
+      <!-- All Cameras 3-column grid (prepared for future cameras) -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700">
         <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">All Cameras</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 flex-1">
+        <div class="grid grid-cols-3 gap-2">
           <div v-for="cam in cameras" :key="cam.id"
-               class="relative rounded-md overflow-hidden cursor-pointer border border-gray-300"
-               style="padding-top:56.25%"
+               class="relative aspect-video rounded-md overflow-hidden cursor-pointer border-2"
+               :class="selectedCam === cam.id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
                @click="selectedCam = cam.id">
             <img :src="cam.thumbnail" alt="Camera thumbnail"
-                 class="absolute inset-0 w-full h-full object-cover" />
-            <span class="absolute bottom-1 left-1 text-xs font-medium px-1.5 py-0.5 rounded"
-                  :class="selectedCam === cam.id ? 'bg-red-600 text-white' : 'bg-gray-700 bg-opacity-70 text-white'">
+                 class="w-full h-full object-cover" />
+            <span class="absolute bottom-0.5 left-0.5 text-xs font-medium px-1 py-0.5 rounded leading-tight"
+                  :class="selectedCam === cam.id ? 'bg-red-600 text-white' : 'bg-black bg-opacity-60 text-white'">
               {{ cam.name }}
             </span>
-            <span class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border border-white shadow"
+            <span class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full border border-white shadow"
                   :class="cameraOnline(cam.id) ? 'bg-green-500 animate-pulse' : 'bg-red-500'"></span>
           </div>
         </div>
@@ -57,13 +74,17 @@
     </section>
 
     <!-- Stats Bar -->
-    <StatsBar :camera="showAllCams ? 'all' : selectedCam" />
+    <StatsBar
+      :camera="showAllCams ? 'all' : selectedCam"
+      :filter="activeFilter"
+      :customFrom="activeFilter === 'custom' ? customFromISO : null"
+      :customTo="activeFilter === 'custom' ? customToISO : null"
+    />
 
     <!-- Unified Filter Row -->
     <div class="flex items-center gap-2 flex-wrap mb-3 mt-3">
-      <!-- Date range filter -->
       <select v-model="activeFilter"
-              class="h-8 px-2 py-0.5 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800">
+              class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
         <option value="day">Last 1 Day</option>
         <option value="week">Last 1 Week</option>
         <option value="month">Last 1 Month</option>
@@ -73,17 +94,16 @@
       </select>
       <template v-if="activeFilter === 'custom'">
         <input type="date" v-model="customFrom"
-               class="h-8 px-2 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800" />
+               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
         <span class="text-sm text-gray-400">to</span>
         <input type="date" v-model="customTo"
-               class="h-8 px-2 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800" />
+               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
       </template>
 
       <!-- Cam toggle -->
       <div class="ml-auto flex items-center gap-2 select-none">
         <span class="text-sm font-medium" :class="!showAllCams ? 'text-red-600' : 'text-gray-400'">
-          <span class="hidden sm:inline">Selected Cam</span>
-          <span class="sm:hidden">Cam</span>
+          <span class="hidden sm:inline">Selected Cam</span><span class="sm:hidden">Cam</span>
         </span>
         <button @click="showAllCams = !showAllCams" role="switch" :aria-checked="showAllCams"
                 class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
@@ -91,16 +111,13 @@
           <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
                 :class="showAllCams ? 'translate-x-6' : 'translate-x-1'"></span>
         </button>
-        <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">
-          All
-        </span>
+        <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">All</span>
       </div>
     </div>
 
     <!-- Table + Chart -->
     <section class="grid grid-cols-1 xl:grid-cols-2 gap-3 items-stretch">
-      <!-- Events Table -->
-      <div class="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 min-h-[400px]">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
         <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Recent Events</h2>
         <EventTable
           :filter="activeFilter"
@@ -109,20 +126,18 @@
           :customTo="activeFilter === 'custom' ? customToISO : null"
         />
       </div>
-
-      <!-- Chart -->
-      <div class="bg-white rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 min-h-[400px]">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
         <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Product Count Statistics</h2>
         <CountChart
           :filter="activeFilter"
           :camera="showAllCams ? 'all' : selectedCam"
           :customFrom="activeFilter === 'custom' ? customFromISO : null"
           :customTo="activeFilter === 'custom' ? customToISO : null"
+          :darkMode="dark"
         />
       </div>
     </section>
 
-    <!-- Toast -->
     <ToastNotif :toasts="toasts" />
   </div>
 </template>
@@ -130,12 +145,15 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useDarkMode } from '../useDarkMode.js'
 import LivePlayer  from '../components/LivePlayer.vue'
 import CountChart  from '../components/CountChart.vue'
 import EventTable  from '../components/EventTable.vue'
 import StatsBar    from '../components/StatsBar.vue'
 import ToastNotif  from '../components/ToastNotif.vue'
 import API from '../api'
+
+const { dark } = useDarkMode()
 
 const cameras = [
   { id: 'cam1', name: 'Tebet', thumbnail: '/images/tebet.jpg' },
@@ -156,24 +174,21 @@ const customToISO = computed(() =>
 )
 
 const router = useRouter()
-
 function logout() {
   localStorage.removeItem('auth_token')
   sessionStorage.removeItem('auth_token')
   router.push('/login')
 }
 
-// ── Idle timeout ──────────────────────────────────────────────────────────────
-const IDLE_LIMIT_MS   = 60 * 60 * 1000   // 1 hour
-const IDLE_WARN_MS    = 55 * 60 * 1000   // warn 5 minutes before
-
-let idleTimer    = null
-let warnTimer    = null
+// ── Idle timeout (1 hour) ─────────────────────────────────────────────────────
+const IDLE_LIMIT_MS = 60 * 60 * 1000
+const IDLE_WARN_MS  = 55 * 60 * 1000
+let idleTimer = null
+let warnTimer = null
 
 function resetIdleTimer() {
   idleWarning.value = false
-  clearTimeout(idleTimer)
-  clearTimeout(warnTimer)
+  clearTimeout(idleTimer); clearTimeout(warnTimer)
   warnTimer = setTimeout(() => { idleWarning.value = true }, IDLE_WARN_MS)
   idleTimer = setTimeout(() => {
     localStorage.removeItem('auth_token')
@@ -188,7 +203,6 @@ resetIdleTimer()
 
 // ── Camera online/offline ──────────────────────────────────────────────────────
 const cameraStatusMap = ref({})
-
 async function fetchCameraStatus() {
   try {
     const res = await API.get('/camera-status')
@@ -197,21 +211,18 @@ async function fetchCameraStatus() {
     cameraStatusMap.value = map
   } catch (_) {}
 }
-
 function cameraOnline(id) { return cameraStatusMap.value[id] === true }
-
 fetchCameraStatus()
 const statusInterval = setInterval(fetchCameraStatus, 10000)
 
-// ── Toast notifications via WebSocket ─────────────────────────────────────────
+// ── Toast notifications ────────────────────────────────────────────────────────
 const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked' }
 const toasts = ref([])
 let toastIdCounter = 0
-
 const toastWs = new WebSocket(`ws://${window.location.host}/ws/events`)
 toastWs.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
-  const id  = ++toastIdCounter
+  const id = ++toastIdCounter
   toasts.value = [
     { id, brand: ev.product_brand || 'Unknown', product: ev.product_name || 'Unknown',
       event_type: ev.event_type, statusLabel: STATUS_LABELS[ev.event_type] || ev.event_type || '—' },
@@ -222,8 +233,7 @@ toastWs.onmessage = (msg) => {
 
 onUnmounted(() => {
   clearInterval(statusInterval)
-  clearTimeout(idleTimer)
-  clearTimeout(warnTimer)
+  clearTimeout(idleTimer); clearTimeout(warnTimer)
   ACTIVITY_EVENTS.forEach(e => document.removeEventListener(e, resetIdleTimer))
   toastWs.close()
 })

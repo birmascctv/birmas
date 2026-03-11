@@ -3,7 +3,7 @@
     <!-- Export CSV button -->
     <div class="flex justify-end mb-2">
       <button @click="exportCSV"
-              class="px-3 py-1 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-sm">
+              class="px-3 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 shadow-sm">
         Export CSV
       </button>
     </div>
@@ -12,35 +12,35 @@
     <table class="text-sm w-full border-collapse text-center min-w-[480px]">
       <thead>
         <tr>
-          <th class="border px-3 py-2 bg-slate-100">Time</th>
-          <th class="border px-3 py-2 bg-slate-100">Camera</th>
-          <th class="border px-3 py-2 bg-slate-100">Brand</th>
-          <th class="border px-3 py-2 bg-slate-100">Product</th>
-          <th class="border px-3 py-2 bg-slate-100">Conf</th>
-          <th class="border px-3 py-2 bg-slate-100">Status</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Time</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Camera</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Brand</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Product</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Conf</th>
+          <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-slate-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Status</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="ev in paginatedEvents" :key="ev.id"
             :class="[rowClass(ev.event_type), newEventIds.has(ev.id) ? 'new-row' : '']">
-          <td class="border px-3 py-2 text-gray-700">
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-700 dark:text-gray-200">
             {{
               ev.ts
                 ? new Date(ev.ts).toISOString().replace('T', ' ').split('.')[0]
                 : '—'
             }}
           </td>
-          <td class="border px-3 py-2">{{ ev.camera_id || '—' }}</td>
-          <td class="border px-3 py-2">{{ ev.product_brand || '—' }}</td>
-          <td class="border px-3 py-2">{{ ev.product_name || '—' }}</td>
-          <td class="border px-3 py-2">
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">{{ ev.camera_id || '—' }}</td>
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">{{ ev.product_brand || '—' }}</td>
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">{{ ev.product_name || '—' }}</td>
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">
             {{
               ev.confidence !== undefined && ev.confidence !== null
                 ? (Number(ev.confidence) * 100).toFixed(1) + '%'
                 : '—'
             }}
           </td>
-          <td class="border px-3 py-2">
+          <td class="border border-gray-300 dark:border-gray-600 px-3 py-2">
             <span :class="statusClass(ev.event_type)"
                   class="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap">
               {{ statusLabel(ev.event_type) }}
@@ -51,28 +51,28 @@
     </table>
     </div>
 
-    <div v-else class="text-center text-slate-400 py-10">No data available</div>
+    <div v-else class="text-center text-gray-400 py-10">No data available</div>
 
     <!-- Pagination -->
-    <div class="flex justify-center gap-2 mt-3" v-if="totalPages > 1">
+    <div class="flex justify-center gap-2 mt-3 flex-wrap" v-if="totalPages > 1">
       <button @click="currentPage = Math.max(1, currentPage - 1)"
-              class="px-2 py-1 rounded border"
+              class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
               :disabled="currentPage === 1">
         Prev
       </button>
 
       <template v-for="n in pagesToShow" :key="n">
-        <span v-if="n === '...'">...</span>
+        <span v-if="n === '...'" class="px-2 py-1 text-gray-400">...</span>
         <button v-else
                 @click="currentPage = n"
-                class="px-2 py-1 rounded border"
-                :class="currentPage === n ? 'bg-red-600 text-white' : 'bg-white text-slate-700'">
+                class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600"
+                :class="currentPage === n ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'">
           {{ n }}
         </button>
       </template>
 
       <button @click="currentPage = Math.min(totalPages, currentPage + 1)"
-              class="px-2 py-1 rounded border"
+              class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
               :disabled="currentPage === totalPages">
         Next
       </button>
@@ -98,10 +98,11 @@ const STATUS_CLASSES = {
   sold:    'bg-green-100 text-green-700',
   restock: 'bg-blue-100 text-blue-700',
 }
+// More prominent row colors: deeper shades so Sold/Restocked stand out clearly
 const ROW_CLASSES = {
-  added:   'bg-red-50',
-  sold:    'bg-green-50',
-  restock: 'bg-blue-50',
+  added:   'bg-red-100 dark:bg-red-950',
+  sold:    'bg-green-200 dark:bg-green-900',
+  restock: 'bg-blue-200 dark:bg-blue-900',
 }
 function statusLabel(type) { return STATUS_LABELS[type] || type || '—' }
 function statusClass(type) { return STATUS_CLASSES[type] || 'bg-gray-100 text-gray-600' }
