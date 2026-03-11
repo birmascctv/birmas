@@ -1,5 +1,13 @@
 <template>
   <div class="flex-1">
+    <!-- Export CSV button -->
+    <div class="flex justify-end mb-2">
+      <button @click="exportCSV"
+              class="px-3 py-1 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-sm">
+        Export CSV
+      </button>
+    </div>
+
     <table v-if="paginatedEvents && paginatedEvents.length"
            class="text-sm w-full border-collapse text-center">
       <thead>
@@ -9,10 +17,12 @@
           <th class="border px-3 py-2 bg-slate-100">Brand</th>
           <th class="border px-3 py-2 bg-slate-100">Product</th>
           <th class="border px-3 py-2 bg-slate-100">Conf</th>
+          <th class="border px-3 py-2 bg-slate-100">Status</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="ev in paginatedEvents" :key="ev.id">
+        <tr v-for="ev in paginatedEvents" :key="ev.id"
+            :class="[rowClass(ev.event_type), newEventIds.has(ev.id) ? 'new-row' : '']">
           <td class="border px-3 py-2 text-gray-700">
             {{
               ev.ts
@@ -29,6 +39,12 @@
                 ? (Number(ev.confidence) * 100).toFixed(1) + '%'
                 : '—'
             }}
+          </td>
+          <td class="border px-3 py-2">
+            <span :class="statusClass(ev.event_type)"
+                  class="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap">
+              {{ statusLabel(ev.event_type) }}
+            </span>
           </td>
         </tr>
       </tbody>
@@ -67,42 +83,100 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import API from '../api'
 
-//declare filter props
 const props = defineProps({
-     camera: { type: String, default: 'cam1' },
-     filter: { type: String, default: 'day' }
-   })
+  camera:     { type: String, default: 'cam1' },
+  filter:     { type: String, default: 'day' },
+  customFrom: { type: String, default: null },
+  customTo:   { type: String, default: null },
+})
+
+// Human-readable status labels
+const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked' }
+const STATUS_CLASSES = {
+  added:   'bg-red-100 text-red-700',
+  sold:    'bg-green-100 text-green-700',
+  restock: 'bg-blue-100 text-blue-700',
+}
+const ROW_CLASSES = {
+  added:   'bg-red-50',
+  sold:    'bg-green-50',
+  restock: 'bg-blue-50',
+}
+function statusLabel(type) { return STATUS_LABELS[type] || type || '—' }
+function statusClass(type) { return STATUS_CLASSES[type] || 'bg-gray-100 text-gray-600' }
+function rowClass(type)    { return ROW_CLASSES[type]    || '' }
+
+// Row limit per filter period
+const LIMIT_MAP = { day: 50, week: 150, month: 500, '3months': 1000, year: 5000, custom: 2000 }
 
 const events = ref([])
 const currentPage = ref(1)
 const pageSize = 10
+const newEventIds = ref(new Set())
 
-watch(() => [props.camera, props.filter], loadEvents)
+watch(() => [props.camera, props.filter, props.customFrom, props.customTo], () => {
+  currentPage.value = 1
+  loadEvents()
+})
 
-//convert filter value to date range
 function getStartDate(filter) {
+  if (filter === 'custom' && props.customFrom) return props.customFrom
   const now = new Date()
   const map = { day: 1, week: 7, month: 30, '3months': 90, year: 365 }
   now.setDate(now.getDate() - (map[filter] || 1))
   return now.toISOString()
 }
 
-// Fetch events from backend
 async function loadEvents() {
   const params = { start_date: getStartDate(props.filter) }
+  if (props.filter === 'custom' && props.customTo) params.end_date = props.customTo
   if (props.camera !== 'all') params.camera_id = props.camera
+  params.limit = LIMIT_MAP[props.filter] || 50
   const res = await API.get('/events', { params })
   events.value = res.data
 }
 loadEvents()
 
-//connects to WebSocket
+// WebSocket for live events
 const ws = new WebSocket(`ws://${window.location.host}/ws/events`)
 ws.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
-  events.value.unshift(ev)  // prepend new event to top of table
+  if (props.camera !== 'all' && ev.camera_id !== props.camera) return
+  const cutoff = new Date(getStartDate(props.filter)).getTime()
+  if (ev.ts && new Date(ev.ts).getTime() < cutoff) return
+  events.value.unshift(ev)
+  // Track new event for flash animation
+  newEventIds.value = new Set([...newEventIds.value, ev.id])
+  setTimeout(() => {
+    const updated = new Set(newEventIds.value)
+    updated.delete(ev.id)
+    newEventIds.value = updated
+  }, 2000)
 }
 onUnmounted(() => ws.close())
+
+// Export CSV
+function exportCSV() {
+  const header = ['Time', 'Camera', 'Brand', 'Product', 'Confidence', 'Status']
+  const rows = events.value.map(ev => [
+    ev.ts ? new Date(ev.ts).toISOString().replace('T', ' ').split('.')[0] : '',
+    ev.camera_id || '',
+    ev.product_brand || '',
+    ev.product_name || '',
+    ev.confidence !== undefined && ev.confidence !== null
+      ? (Number(ev.confidence) * 100).toFixed(1) + '%' : '',
+    STATUS_LABELS[ev.event_type] || ev.event_type || '',
+  ])
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  const today = new Date().toISOString().split('T')[0]
+  a.href = url
+  a.download = `events_${props.filter}_${props.camera}_${today}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 // Pagination
 const totalPages = computed(() =>
@@ -113,22 +187,35 @@ const paginatedEvents = computed(() =>
   events.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize)
 )
 
-// ✅ Define pagesToShow to fix Vue warning
 const pagesToShow = computed(() => {
   const total = totalPages.value
-  const current = currentPage.value
-  const range = []
+  const cur   = currentPage.value
 
-  const start = Math.max(1, current - 2)
-  const end = Math.min(total, current + 2)
+  if (total <= 6) return Array.from({ length: total }, (_, i) => i + 1)
 
-  for (let i = start; i <= end; i++) {
-    range.push(i)
+  const first3 = [1, 2, 3]
+  const last3  = [total - 2, total - 1, total]
+  const mid    = [cur - 1, cur].filter(p => p > 3 && p < total - 2)
+
+  const allNums = [...new Set([...first3, ...mid, ...last3])].sort((a, b) => a - b)
+
+  const result = []
+  let prev = 0
+  for (const p of allNums) {
+    if (p > prev + 1) result.push('...')
+    result.push(p)
+    prev = p
   }
-
-  if (start > 1) range.unshift('...')
-  if (end < total) range.push('...')
-
-  return range
+  return result
 })
 </script>
+
+<style scoped>
+.new-row {
+  animation: flash-row 2s ease-out;
+}
+@keyframes flash-row {
+  0%   { background-color: #fef08a; }
+  100% { background-color: inherit; }
+}
+</style>

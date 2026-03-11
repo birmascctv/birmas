@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
@@ -54,7 +55,9 @@ async def post_event(ev: EventCreate, request: Request, db: Session =
 async def get_events(
     camera_id:  str | None = None,
     start_date: str | None = None,
+    end_date:   str | None = None,
     event_type: str | None = None,
+    limit:      int = 500,
     db: Session = Depends(get_db)
 ):
     q = db.query(Event)
@@ -62,6 +65,19 @@ async def get_events(
         q = q.filter(Event.camera_id == camera_id)
     if start_date:
         q = q.filter(Event.ts >= start_date)
+    if end_date:
+        q = q.filter(Event.ts <= end_date)
     if event_type:
         q = q.filter(Event.event_type == event_type)
-    return q.order_by(Event.ts.desc()).limit(500).all()
+    return q.order_by(Event.ts.desc()).limit(min(limit, 5000)).all()
+
+
+@router.get("/camera-status")
+async def camera_status():
+    try:
+        r = httpx.get("http://localhost:9997/v3/paths/list", timeout=2)
+        items = r.json().get("items", [])
+        cameras = [{"id": it["name"], "online": bool(it.get("source"))} for it in items]
+        return {"cameras": cameras}
+    except Exception:
+        return {"cameras": []}
