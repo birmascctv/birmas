@@ -210,9 +210,10 @@ async function loadChartData() {
         data: { labels, datasets: [{ data, backgroundColor: labels.map((_, i) => brandColor(i)), borderWidth: 1 }] },
         options: {
           responsive: true, maintainAspectRatio: false,
+          layout: { padding: { top: 8 } },
           plugins: {
             legend: { position: 'right', labels: { color: tc, font: { size: 11 }, boxWidth: 12 } },
-            title: { display: true, text: 'Detections by Brand', color: tc, font: { size: 13 } },
+            title: { display: true, position: 'top', text: 'Detections by Brand', color: tc, font: { size: 13 }, padding: { bottom: 12 } },
             tooltip: { callbacks: { label: c => `${c.label}: ${c.raw} (${total ? ((c.raw/total)*100).toFixed(1) : 0}%)` } },
           },
         },

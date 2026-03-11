@@ -32,24 +32,31 @@ const props = defineProps({
 const v = ref(null)
 const isOffline = ref(false)
 let hlsInstance      = null
-let liveEdgeInterval = null
+let watchdogInterval = null
 let retryDelay       = 3000
+let lastTime         = -1
+let stuckCount       = 0
+let userPaused       = false   // track if user intentionally paused
 
 // Build direct mediamtx URL to bypass the Vite proxy.
-// Using the proxy for long-lived HLS segment fetches can cause
-// net::ERR_NETWORK_CHANGED when the Vite connection pool resets.
 function directUrl(path) {
-  // path is like "/stream/cam1/index.m3u8" → "/cam1/index.m3u8"
   const stripped = path.replace(/^\/stream/, '')
   return `http://${window.location.hostname}:8888${stripped}`
+}
+
+function stopWatchdog() {
+  if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null }
 }
 
 const loadStream = (src) => {
   if (!v.value) return
   isOffline.value = false
+  stuckCount = 0
+  lastTime   = -1
+  userPaused = false
 
-  if (hlsInstance)      { hlsInstance.destroy();      hlsInstance      = null }
-  if (liveEdgeInterval) { clearInterval(liveEdgeInterval); liveEdgeInterval = null }
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
+  stopWatchdog()
 
   const url = directUrl(src)
 
@@ -60,17 +67,18 @@ const loadStream = (src) => {
 
   hlsInstance = new Hls({
     lowLatencyMode:              false,
-    liveSyncDurationCount:       3,    // 3 segments behind live edge (~9s with 3s segs)
-    liveMaxLatencyDurationCount: 8,    // jump forward if >8 segments behind
-    maxBufferLength:             20,
-    liveBackBufferLength:        3,
+    liveSyncDurationCount:       2,    // 2 segments (~6s) behind live edge
+    liveMaxLatencyDurationCount: 5,    // jump if >5 segments (~15s) behind
+    maxBufferLength:             12,
+    maxMaxBufferLength:          30,
+    liveBackBufferLength:        2,
     enableWorker:                true,
-    fragLoadingMaxRetry:         2,
-    manifestLoadingMaxRetry:     6,
-    levelLoadingMaxRetry:        6,
-    // Faster retry on network errors (ERR_NETWORK_CHANGED)
+    fragLoadingMaxRetry:         4,
+    manifestLoadingMaxRetry:     8,
+    levelLoadingMaxRetry:        8,
     fragLoadingRetryDelay:       500,
     manifestLoadingRetryDelay:   500,
+    fragLoadingMaxRetryTimeout:  8000,
   })
 
   hlsInstance.loadSource(url)
@@ -83,7 +91,7 @@ const loadStream = (src) => {
   })
 
   hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
-    // Segment 404: Pi reconnected → mediamtx has new session ID → reload immediately
+    // Segment 404: stream restarted → reload
     if (
       data.type    === Hls.ErrorTypes.NETWORK_ERROR &&
       data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR &&
@@ -95,11 +103,9 @@ const loadStream = (src) => {
       return
     }
 
-    // Non-fatal: HLS.js will retry internally
     if (!data.fatal) return
 
     isOffline.value = true
-
     if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
       hlsInstance.recoverMediaError()
     } else {
@@ -109,33 +115,53 @@ const loadStream = (src) => {
     }
   })
 
-  v.value.addEventListener('playing', () => { isOffline.value = false }, { once: false })
+  // Stall watchdog: every 5s check if currentTime advanced.
+  // If stuck 3 times in a row (15s stall) → full reload.
+  watchdogInterval = setInterval(() => {
+    if (!v.value || userPaused) return
+    const cur = v.value.currentTime
 
-  // Jump to live edge if viewer drifted too far behind
-  liveEdgeInterval = setInterval(() => {
-    if (v.value && hlsInstance && hlsInstance.liveSyncPosition != null) {
-      if (v.value.currentTime < hlsInstance.liveSyncPosition - 30) {
-        v.value.currentTime = hlsInstance.liveSyncPosition
+    if (!v.value.paused && v.value.readyState >= 2) {
+      if (Math.abs(cur - lastTime) < 0.1) {
+        stuckCount++
+        if (stuckCount >= 3) {
+          // Video is not progressing — hard reload
+          stuckCount = 0
+          retryDelay = 3000
+          loadStream(src)
+          return
+        }
+        // Try jump-to-live first
+        if (hlsInstance?.liveSyncPosition != null) {
+          v.value.currentTime = hlsInstance.liveSyncPosition
+          v.value.play().catch(() => {})
+        }
+      } else {
+        stuckCount = 0
+      }
+    } else if (v.value.paused && !userPaused) {
+      // Paused but user didn't pause — buffering stall
+      stuckCount++
+      if (stuckCount >= 3) {
+        stuckCount = 0
+        loadStream(src)
       }
     }
-  }, 15000)
+    lastTime = cur
+  }, 5000)
+
+  v.value.addEventListener('playing', () => { isOffline.value = false; stuckCount = 0 }, { once: false })
+  v.value.addEventListener('pause',   () => { /* can't reliably distinguish user vs buffer pause here */ })
 }
 
-// Reload stream on network recovery (fixes net::ERR_NETWORK_CHANGED)
 function onNetworkOnline() {
-  if (props.src) {
-    retryDelay = 3000
-    loadStream(props.src)
-  }
+  if (props.src) { retryDelay = 3000; loadStream(props.src) }
 }
 
-// Reload stream when tab becomes visible again after being hidden
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible') {
-    // If video is paused or buffering, reload
-    if (v.value && (v.value.paused || v.value.readyState < 2)) {
-      retryDelay = 3000
-      loadStream(props.src)
+  if (document.visibilityState === 'visible' && v.value) {
+    if (v.value.paused || v.value.readyState < 2) {
+      retryDelay = 3000; loadStream(props.src)
     }
   }
 }
@@ -149,8 +175,8 @@ onMounted(() => {
 watch(() => props.src, (newSrc) => { retryDelay = 3000; loadStream(newSrc) })
 
 onUnmounted(() => {
-  if (liveEdgeInterval) clearInterval(liveEdgeInterval)
-  if (hlsInstance)      { hlsInstance.destroy(); hlsInstance = null }
+  stopWatchdog()
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null }
   window.removeEventListener('online', onNetworkOnline)
   document.removeEventListener('visibilitychange', onVisibilityChange)
 })
