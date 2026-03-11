@@ -91,8 +91,8 @@ const BRAND_COLORS = [
 const brandColor = (i) => BRAND_COLORS[i % BRAND_COLORS.length]
 
 // Chart.js theme colours driven by darkMode prop
-function textColor()   { return props.darkMode ? '#d1d5db' : '#374151' }
-function gridColor()   { return props.darkMode ? '#374151' : '#e5e7eb' }
+function textColor()   { return props.darkMode ? '#ffffff' : '#374151' }
+function gridColor()   { return props.darkMode ? '#4b5563' : '#e5e7eb' }
 function canvasBg()    { return props.darkMode ? '#1f2937' : '#ffffff' }
 
 // Integer-only tick config for Y (or X for horizontal charts)

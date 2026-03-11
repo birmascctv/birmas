@@ -15,7 +15,7 @@
           <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 15a5 5 0 100-10 5 5 0 000 10zm7.07-12.07a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM21 11h1a1 1 0 110 2h-1a1 1 0 110-2zm-2.93 7.07a1 1 0 01-1.41 0l-.71-.71a1 1 0 011.41-1.41l.71.71a1 1 0 010 1.41zM12 20a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-7.07-2.93a1 1 0 010-1.41l.71-.71a1 1 0 111.41 1.41l-.71.71a1 1 0 01-1.41 0zM3 11h1a1 1 0 110 2H3a1 1 0 110-2zm1.93-7.07a1 1 0 011.41 0l.71.71a1 1 0 01-1.41 1.41l-.71-.71a1 1 0 010-1.41z"/>
           </svg>
-          <button @click="dark = !dark" role="switch" :aria-checked="dark"
+          <button @click="toggleDark()" role="switch" :aria-checked="dark"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
                   :class="dark ? 'bg-indigo-600' : 'bg-gray-300'">
             <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
@@ -153,7 +153,7 @@ import StatsBar    from '../components/StatsBar.vue'
 import ToastNotif  from '../components/ToastNotif.vue'
 import API from '../api'
 
-const { dark } = useDarkMode()
+const { dark, toggleDark } = useDarkMode()
 
 const cameras = [
   { id: 'cam1', name: 'Tebet', thumbnail: '/images/tebet.jpg' },

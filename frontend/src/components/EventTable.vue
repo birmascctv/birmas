@@ -100,9 +100,9 @@ const STATUS_CLASSES = {
 }
 // More prominent row colors: deeper shades so Sold/Restocked stand out clearly
 const ROW_CLASSES = {
-  added:   'bg-red-100 dark:bg-red-950',
-  sold:    'bg-green-200 dark:bg-green-900',
-  restock: 'bg-blue-200 dark:bg-blue-900',
+  added:   'bg-red-100 dark:bg-red-950/40',
+  sold:    'bg-green-200 dark:bg-green-800/40',
+  restock: 'bg-blue-200 dark:bg-blue-800/40',
 }
 function statusLabel(type) { return STATUS_LABELS[type] || type || '—' }
 function statusClass(type) { return STATUS_CLASSES[type] || 'bg-gray-100 text-gray-600' }
