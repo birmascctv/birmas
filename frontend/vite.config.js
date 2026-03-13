@@ -21,12 +21,12 @@ export default defineConfig({
         secure: false,
       },
       '/ws': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://10.0.0.1:8000',
         changeOrigin: true,
         ws: true
       },
       '/stream': {
-        target: 'http://127.0.0.1:8888', // ✅ matches your MediaMTX stream
+        target: 'http://10.0.0.1:8888', // ✅ matches your MediaMTX stream
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/stream/, '')
