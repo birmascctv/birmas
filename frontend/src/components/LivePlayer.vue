@@ -38,10 +38,10 @@ let lastTime         = -1
 let stuckCount       = 0
 let userPaused       = false   // track if user intentionally paused
 
-// Build direct mediamtx URL to bypass the Vite proxy.
+// Build direct mediamtx URL.
 function directUrl(path) {
   const stripped = path.replace(/^\/stream/, '')
-  return `http://${window.location.hostname}:8888${stripped}`
+  return `http://10.0.0.1:8888${stripped}`
 }
 
 function stopWatchdog() {

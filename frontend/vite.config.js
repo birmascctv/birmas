@@ -16,7 +16,7 @@ export default defineConfig({
     allowedHosts: true, //['ubuntu-s-2vcpu-4gb-sgp1-01.tail79eba2.ts.net'], // ✅ explicitly allow your Funnel domain
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000', // ✅ matches your FastAPI backend
+        target: 'http://10.0.0.1:8000', // ✅ matches your FastAPI backend
         changeOrigin: true,
         secure: false,
       },
