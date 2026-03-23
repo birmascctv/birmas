@@ -162,7 +162,6 @@ import CountChart  from '../components/CountChart.vue'
 import EventTable  from '../components/EventTable.vue'
 import StatsBar    from '../components/StatsBar.vue'
 import ToastNotif  from '../components/ToastNotif.vue'
-import TimelineScrubber from '../components/TimelineScrubber.vue'
 import API from '../api'
 
 const { dark, toggleDark } = useDarkMode()
