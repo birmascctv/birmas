@@ -115,6 +115,17 @@
       </div>
     </div>
 
+    <!-- Timeline Scrubber -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-4 min-h-[260px]">
+      <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Timeline</h2>
+      <TimelineScrubber
+        :filter="activeFilter"
+        :camera="showAllCams ? 'all' : selectedCam"
+        :customFrom="activeFilter === 'custom' ? customFromISO : null"
+        :customTo="activeFilter === 'custom' ? customToISO : null"
+      />
+    </div>
+
     <!-- Table + Chart -->
     <section class="grid grid-cols-1 xl:grid-cols-2 gap-3 items-stretch">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
@@ -151,6 +162,7 @@ import CountChart  from '../components/CountChart.vue'
 import EventTable  from '../components/EventTable.vue'
 import StatsBar    from '../components/StatsBar.vue'
 import ToastNotif  from '../components/ToastNotif.vue'
+import TimelineScrubber from '../components/TimelineScrubber.vue'
 import API from '../api'
 
 const { dark, toggleDark } = useDarkMode()
