@@ -28,9 +28,9 @@ if ! systemctl is-active --quiet backend; then
     systemctl restart backend 2>/dev/null
 fi
 
-# Check frontend
-if ! curl -s -o /dev/null --max-time 5 http://localhost:5173/dashboard; then
-    ISSUES="${ISSUES}Frontend not responding. "
+# Check nginx (static frontend)
+if ! curl -sk -o /dev/null --max-time 5 https://localhost/dashboard; then
+    ISSUES="${ISSUES}Nginx/frontend not responding. "
 fi
 
 # Check MediaMTX
