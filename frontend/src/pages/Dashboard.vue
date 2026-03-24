@@ -189,7 +189,7 @@ const cameras = [
 ]
 
 const selectedCam  = ref('cam1')
-const activeFilter = ref('day')
+const activeFilter = ref('month')
 const showAllCams  = ref(false)
 const customFrom   = ref('')
 const customTo     = ref('')
@@ -261,7 +261,7 @@ const statusInterval = setInterval(fetchCameraStatus, 10000)
 const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked' }
 const toasts = ref([])
 let toastIdCounter = 0
-const toastWs = new WebSocket(`ws://${window.location.host}/ws/events`)
+const toastWs = new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/events`)
 toastWs.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
   const id = ++toastIdCounter

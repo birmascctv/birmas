@@ -62,8 +62,9 @@ async function loadStats() {
 loadStats()
 watch(() => [props.camera, props.filter, props.customFrom, props.customTo], loadStats)
 
-// WebSocket for live increments
-const ws = new WebSocket(`ws://${window.location.host}/ws/events`)
+// WebSocket for live increments — use wss:// on HTTPS to avoid mixed-content block
+const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+const ws = new WebSocket(`${wsProto}://${window.location.host}/ws/events`)
 ws.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
   if (props.camera !== 'all' && ev.camera_id !== props.camera) return

@@ -130,17 +130,20 @@ function getStartDate(filter) {
 }
 
 async function loadEvents() {
-  const params = { start_date: getStartDate(props.filter) }
-  if (props.filter === 'custom' && props.customTo) params.end_date = props.customTo
-  if (props.camera !== 'all') params.camera_id = props.camera
-  params.limit = LIMIT_MAP[props.filter] || 50
-  const res = await API.get('/events', { params })
-  events.value = res.data
+  try {
+    const params = { start_date: getStartDate(props.filter) }
+    if (props.filter === 'custom' && props.customTo) params.end_date = props.customTo
+    if (props.camera !== 'all') params.camera_id = props.camera
+    params.limit = LIMIT_MAP[props.filter] || 50
+    const res = await API.get('/events', { params })
+    events.value = res.data
+  } catch (_) {}
 }
 loadEvents()
 
-// WebSocket for live events
-const ws = new WebSocket(`ws://${window.location.host}/ws/events`)
+// WebSocket for live events — use wss:// on HTTPS to avoid mixed-content block
+const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+const ws = new WebSocket(`${wsProto}://${window.location.host}/ws/events`)
 ws.onmessage = (msg) => {
   const ev = JSON.parse(msg.data)
   if (props.camera !== 'all' && ev.camera_id !== props.camera) return
