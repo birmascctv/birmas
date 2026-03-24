@@ -35,3 +35,4 @@ Thumbs.db
 # Temporary files
 *.tmp
 venv/
+backend/routes/__pycache__/
