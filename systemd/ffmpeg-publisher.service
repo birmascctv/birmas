@@ -7,7 +7,7 @@ After=network.target
 # Server re-encodes cam1_raw -> cam1 to strip B-frames for HLS.
 ExecStart=/usr/bin/ffmpeg -rtsp_transport tcp \
           -i rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101 \
-          -c:v copy -an -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw
+          -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw
 Restart=always
 RestartSec=5
 

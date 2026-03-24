@@ -1,5 +1,5 @@
 import sys, os
-import time, cv2, requests, base64
+import os, time, cv2, requests, base64
 import threading
 from ultralytics import YOLO
 from tracker import ProductTracker
@@ -101,19 +101,57 @@ seen_tracks = {}   # {track_id: {"last_seen": float, "label": str}}
 frame_count = 0
 start_time  = time.time()
 
+FRAMES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage", "frames")
+os.makedirs(FRAMES_DIR, exist_ok=True)
+
+# Color map: BGR for cv2
+_COLORS = {"sold": (0, 200, 0), "restock": (200, 120, 0), "added": (0, 0, 220)}
+
 def post_event(event_type: str, label: str, bbox: str, confidence: float,
                frame_img=None):
+    ts_str = now_wib().isoformat()
     payload = {
         "camera_id":  "cam1",
-        "ts":         now_wib().isoformat(),
+        "ts":         ts_str,
         "label":      label,
         "bbox":       bbox,
         "confidence": confidence,
         "event_type": event_type,
     }
+    # Draw bbox on a copy and save locally + encode for server
+    annotated = None
     if frame_img is not None:
         try:
-            ok, buf = cv2.imencode(".jpg", frame_img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            annotated = frame_img.copy()
+            if bbox and bbox.strip():
+                coords = list(map(float, bbox.split(",")))
+                if len(coords) == 4:
+                    x1, y1, x2, y2 = map(int, coords)
+                    color = _COLORS.get(event_type, (0, 0, 220))
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+                    txt = f"{label} {confidence:.0%}"
+                    (tw, th), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                    cv2.rectangle(annotated, (x1, y1 - th - 6), (x1 + tw + 4, y1), color, -1)
+                    cv2.putText(annotated, txt, (x1 + 2, y1 - 4),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        except Exception as e:
+            print(f"[WARN] bbox draw: {e}")
+            annotated = frame_img
+
+    # Save annotated frame locally
+    if annotated is not None:
+        try:
+            ts_file = now_wib().strftime("%Y%m%d_%H%M%S")
+            fname = f"{ts_file}_{event_type}_{label}.jpg"
+            cv2.imwrite(os.path.join(FRAMES_DIR, fname), annotated,
+                        [cv2.IMWRITE_JPEG_QUALITY, 85])
+        except Exception as e:
+            print(f"[WARN] frame save: {e}")
+
+    # Encode annotated frame for server (with bbox drawn)
+    if annotated is not None:
+        try:
+            ok, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
             if ok:
                 payload["frame"] = base64.b64encode(buf.tobytes()).decode("ascii")
         except Exception:

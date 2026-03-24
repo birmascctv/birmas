@@ -14,7 +14,7 @@
       <div class="absolute rounded-full cursor-pointer z-[3] border-2 border-white dark:border-gray-800 shadow transition-all duration-200"
            :style="dotStyle(ev)"
            :class="[colorBg(ev.event_type), nearScrubber(ev) ? 'scale-125' : '']"
-           @mouseenter.stop="hover(ev, $event)"
+           @mouseenter.stop="hover(ev)"
            @mouseleave.stop="unhover"
            @click.stop="select(ev)"></div>
     </template>
@@ -54,17 +54,17 @@
       No events for this day
     </div>
 
-    <!-- Hover tooltip -->
+    <!-- Hover tooltip (anchored directly above/below the dot) -->
     <Transition name="fade">
       <div v-if="hovered"
            class="absolute z-[20] bg-white dark:bg-gray-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700 pointer-events-none overflow-hidden"
-           :style="tooltipStyle" style="width: 240px">
+           :style="tooltipPos" style="width: 220px">
         <img v-if="hovered.hasFrame" :src="frameUrl(hovered.id)"
              class="w-full h-28 object-cover bg-gray-100 dark:bg-gray-700" alt="" @error="hovered.hasFrame = false" />
-        <div v-else class="w-full h-20 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-xs">
+        <div v-else class="w-full h-16 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-xs">
           No capture
         </div>
-        <div class="p-2.5">
+        <div class="px-2.5 py-2">
           <p class="text-sm font-semibold truncate">{{ hovered.product_brand }} — {{ hovered.product_name }}</p>
           <p class="text-[11px] text-gray-500 mt-0.5">{{ fmtTime(hovered.ts) }} ·
             <span :class="colorText(hovered.event_type)">{{ label(hovered.event_type) }}</span>
@@ -80,30 +80,30 @@
         <div v-if="selected"
              class="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
              @click="selected = null">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto"
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-auto"
                @click.stop>
             <img v-if="selected.hasFrame" :src="frameUrl(selected.id)"
-                 class="w-full max-h-[50vh] object-contain bg-black" alt="" />
-            <div v-else class="w-full h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+                 class="w-full max-h-[65vh] object-contain bg-black" alt="" />
+            <div v-else class="w-full h-64 bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-lg">
               No frame capture available
             </div>
-            <div class="p-5">
-              <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="p-6">
+              <div class="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <h3 class="text-lg font-bold">{{ selected.product_brand }}</h3>
+                  <h3 class="text-xl font-bold">{{ selected.product_brand }}</h3>
                   <p class="text-sm text-gray-500">{{ selected.product_name }}</p>
                 </div>
-                <span class="shrink-0 px-2 py-0.5 rounded text-xs font-bold text-white"
+                <span class="shrink-0 px-3 py-1 rounded text-sm font-bold text-white"
                       :class="badgeBg(selected.event_type)">{{ label(selected.event_type) }}</span>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <div><span class="text-gray-400">Time</span><br>{{ fmtTime(selected.ts) }}</div>
-                <div><span class="text-gray-400">Camera</span><br>{{ selected.camera_id }}</div>
-                <div><span class="text-gray-400">Confidence</span><br>{{ (selected.confidence * 100).toFixed(1) }}%</div>
-                <div><span class="text-gray-400">BBox</span><br>{{ selected.bbox || '—' }}</div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-300">
+                <div><span class="text-gray-400 text-xs">Time</span><br>{{ fmtTime(selected.ts) }}</div>
+                <div><span class="text-gray-400 text-xs">Camera</span><br>{{ selected.camera_id }}</div>
+                <div><span class="text-gray-400 text-xs">Confidence</span><br>{{ (selected.confidence * 100).toFixed(1) }}%</div>
+                <div><span class="text-gray-400 text-xs">BBox</span><br>{{ selected.bbox || '—' }}</div>
               </div>
               <button @click="selected = null"
-                      class="mt-4 w-full py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                      class="mt-5 w-full py-2.5 rounded-lg bg-gray-200 dark:bg-gray-700 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition">
                 Close
               </button>
             </div>
@@ -137,7 +137,6 @@ const cW           = ref(800)
 const events       = ref([])
 const loading      = ref(false)
 const hovered      = ref(null)
-const tooltipPx    = ref({ x: 0, y: 0 })
 const selected     = ref(null)
 const scrubFrac    = ref(0.5)        // 0‑1 along timeline
 let   dragging     = false
@@ -255,18 +254,29 @@ function fmtTime (ts) {
   return t.substring(0, 8)
 }
 
-/* ── tooltip ── */
-const tooltipStyle = computed(() => {
+/* ── tooltip (anchored to dot position) ── */
+const TOOLTIP_W = 220
+const TOOLTIP_H_WITH_IMG = 190   // img 112 + text ~78
+const TOOLTIP_H_NO_IMG   = 130
+function tooltipHeight (ev) { return ev?.hasFrame ? TOOLTIP_H_WITH_IMG : TOOLTIP_H_NO_IMG }
+const tooltipPos = computed(() => {
   if (!hovered.value) return { display: 'none' }
-  const up = hovered.value.event_type === 'sold'
-  return {
-    left: Math.min(Math.max(tooltipPx.value.x - 120, 4), cW.value - 248) + 'px',
-    top:  (up ? tooltipPx.value.y - 220 : tooltipPx.value.y + 16) + 'px',
-  }
+  const ev = hovered.value
+  const x  = fracPx(ev.frac)
+  const up = ev.event_type === 'sold'
+  const jit = ev._jitter || 0
+  const h   = STEM_H - jit
+  // Dot center y
+  const dotCY = up ? TL_Y - h - DOT_R / 2 : TL_Y + h + DOT_R / 2
+  const tH = tooltipHeight(ev)
+  // Place above dot for sold (up), below dot for others (down)
+  const top = up ? dotCY - tH - 8 : dotCY + 8
+  const left = Math.min(Math.max(x - TOOLTIP_W / 2, 4), cW.value - TOOLTIP_W - 4)
+  return { left: left + 'px', top: top + 'px' }
 })
-function hover (ev, e) { hovered.value = ev; tooltipPx.value = { x: e.offsetX || e.layerX || 0, y: e.offsetY || e.layerY || 0 } }
-function unhover ()     { hovered.value = null }
-function select (ev)    { selected.value = ev }
+function hover (ev) { hovered.value = ev }
+function unhover ()  { hovered.value = null }
+function select (ev) { selected.value = ev }
 
 /* ── mouse / touch drag ── */
 function scrubTo (clientX) {
