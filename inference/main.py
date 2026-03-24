@@ -1,5 +1,5 @@
 import sys, os
-import time, cv2, requests
+import time, cv2, requests, base64
 import threading
 from ultralytics import YOLO
 from tracker import ProductTracker
@@ -101,7 +101,8 @@ seen_tracks = {}   # {track_id: {"last_seen": float, "label": str}}
 frame_count = 0
 start_time  = time.time()
 
-def post_event(event_type: str, label: str, bbox: str, confidence: float):
+def post_event(event_type: str, label: str, bbox: str, confidence: float,
+               frame_img=None):
     payload = {
         "camera_id":  "cam1",
         "ts":         now_wib().isoformat(),
@@ -110,8 +111,15 @@ def post_event(event_type: str, label: str, bbox: str, confidence: float):
         "confidence": confidence,
         "event_type": event_type,
     }
+    if frame_img is not None:
+        try:
+            ok, buf = cv2.imencode(".jpg", frame_img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            if ok:
+                payload["frame"] = base64.b64encode(buf.tobytes()).decode("ascii")
+        except Exception:
+            pass
     try:
-        requests.post(API_ENDPOINT, json=payload, timeout=2)
+        requests.post(API_ENDPOINT, json=payload, timeout=5)
     except Exception as e:
         print(f"[ERROR] post {event_type} for {label}: {e}")
 
@@ -169,7 +177,7 @@ while True:
                     # Fallback: first of this class = added, duplicate class = restock
                     same_class_active = any(v["label"] == label for v in seen_tracks.values())
                     event_type = "added" if not same_class_active else "restock"
-                post_event(event_type, label, bbox, float(obj["confidence"]))
+                post_event(event_type, label, bbox, float(obj["confidence"]), frame_img=frame)
                 print(f"[{event_type.upper()}] {label} (track {tid})")
                 seen_tracks[tid] = {"last_seen": now, "label": label}
             else:

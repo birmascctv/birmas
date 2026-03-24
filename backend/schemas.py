@@ -27,6 +27,7 @@ class EventCreate(BaseModel):
     bbox:       str
     confidence: float
     event_type: Optional[str] = "added"   # "added" | "restock" | "sold"
+    frame:      Optional[str] = None      # base64-encoded JPEG frame capture
 
 class EventBase(BaseModel):
     camera_id:    str

@@ -1,11 +1,16 @@
 import httpx
+import base64, pathlib
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import Event, Product, now_wib
 from backend.schemas import EventCreate, EventOut
 
 router = APIRouter()
+
+FRAMES_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "storage" / "frames"
+FRAMES_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_db():
     db = SessionLocal()
@@ -15,7 +20,7 @@ def get_db():
         db.close()
 
 @router.post("/events", response_model=EventOut)
-async def post_event(ev: EventCreate, request: Request, db: Session = 
+async def post_event(ev: EventCreate, request: Request, db: Session =
     Depends(get_db)):
     try:
         product = db.query(Product).filter(Product.class_name ==
@@ -35,6 +40,14 @@ async def post_event(ev: EventCreate, request: Request, db: Session =
         db.commit()
         db.refresh(new_event)
 
+        # Save frame capture if provided
+        if ev.frame:
+            try:
+                img_bytes = base64.b64decode(ev.frame)
+                (FRAMES_DIR / f"{new_event.id}.jpg").write_bytes(img_bytes)
+            except Exception:
+                pass  # non-critical — event is saved even if frame fails
+
         manager = request.app.state.manager
         await manager.broadcast({
             "id":            new_event.id,
@@ -50,6 +63,13 @@ async def post_event(ev: EventCreate, request: Request, db: Session =
         return new_event
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/frames/{event_id}")
+async def get_frame(event_id: int):
+    path = FRAMES_DIR / f"{event_id}.jpg"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Frame not found")
+    return FileResponse(path, media_type="image/jpeg")
 
 @router.get("/events", response_model=list[EventOut])
 async def get_events(
