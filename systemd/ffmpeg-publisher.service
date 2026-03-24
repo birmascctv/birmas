@@ -3,25 +3,11 @@ Description=FFmpeg Publisher Camera to Server MediaMTX
 After=network.target
 
 [Service]
-# CH101 native H264 → h264_v4l2m2m hardware encoder (VideoCore VI).
-# Why not passthrough (-c:v copy)?
-#   Camera CH101 uses H264 with B-frames. mediamtx HLS muxer fails with
-#   "unable to extract DTS: too many reordered frames" every ~30s.
-#   Hardware encoder produces B-frame-free output → clean HLS segments.
-# Why CH101 not CH102?
-#   CH102 is HEVC (H265) — heavier to decode on Pi CPU.
-#   CH101 is H264 — fast decode + hardware encode = ~30% total CPU.
-# 3Mbps: sharp 1280x720, no visible compression artifacts.
-# -g 25: keyframe every second → 2-3s HLS segments → low latency.
-ExecStart=/usr/bin/ffmpeg \
-  -rtsp_transport tcp \
-  -i rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101 \
-  -vf format=yuv420p \
-  -c:v h264_v4l2m2m -b:v 3000k -bufsize 3000k \
-  -g 25 \
-  -an \
-  -rtsp_transport tcp \
-  -f rtsp rtsp://10.0.0.1:8554/cam1
+# Passthrough (no re-encoding) to cam1_raw on server.
+# Server re-encodes cam1_raw -> cam1 to strip B-frames for HLS.
+ExecStart=/usr/bin/ffmpeg -rtsp_transport tcp \
+          -i rtsp://admin:MasBirTebet1@192.168.68.101:554/Streaming/Channels/101 \
+          -c:v copy -an -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw
 Restart=always
 RestartSec=5
 
