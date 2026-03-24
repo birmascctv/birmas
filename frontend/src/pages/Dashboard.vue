@@ -81,8 +81,36 @@
       :customTo="activeFilter === 'custom' ? customToISO : null"
     />
 
-    <!-- Unified Filter Row -->
-    <div class="flex items-center gap-2 flex-wrap mb-3 mt-3">
+    <!-- Timeline Scrubber -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3 mt-3 min-h-[260px]">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <h2 class="text-base sm:text-lg font-semibold text-red-600">Timeline</h2>
+        <div class="ml-auto flex items-center gap-2">
+          <button @click="shiftDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+            ◀
+          </button>
+          <input type="date" v-model="timelineDate"
+                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          <button @click="shiftDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+            ▶
+          </button>
+          <button @click="timelineDate = todayStr()"
+                  class="h-8 px-2 rounded text-xs font-medium transition"
+                  :class="timelineDate === todayStr()
+                    ? 'bg-red-600 text-white'
+                    : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+            Today
+          </button>
+        </div>
+      </div>
+      <TimelineScrubber
+        :date="timelineDate"
+        :camera="showAllCams ? 'all' : selectedCam"
+      />
+    </div>
+
+    <!-- Filter Row (for table & chart) -->
+    <div class="flex items-center gap-2 flex-wrap mb-3">
       <select v-model="activeFilter"
               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
         <option value="day">Last 1 Day</option>
@@ -113,17 +141,6 @@
         </button>
         <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">All</span>
       </div>
-    </div>
-
-    <!-- Timeline Scrubber -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-4 min-h-[260px]">
-      <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Timeline</h2>
-      <TimelineScrubber
-        :filter="activeFilter"
-        :camera="showAllCams ? 'all' : selectedCam"
-        :customFrom="activeFilter === 'custom' ? customFromISO : null"
-        :customTo="activeFilter === 'custom' ? customToISO : null"
-      />
     </div>
 
     <!-- Table + Chart -->
@@ -177,6 +194,19 @@ const showAllCams  = ref(false)
 const customFrom   = ref('')
 const customTo     = ref('')
 const idleWarning  = ref(false)
+
+// Timeline date (WIB)
+function todayStr () {
+  const d = new Date()
+  const wib = new Date(d.getTime() + (d.getTimezoneOffset() + 7 * 60) * 60000)
+  return `${wib.getFullYear()}-${String(wib.getMonth()+1).padStart(2,'0')}-${String(wib.getDate()).padStart(2,'0')}`
+}
+const timelineDate = ref(todayStr())
+function shiftDate (delta) {
+  const d = new Date(timelineDate.value + 'T00:00:00')
+  d.setDate(d.getDate() + delta)
+  timelineDate.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
 
 const customFromISO = computed(() =>
   customFrom.value ? new Date(customFrom.value + 'T00:00:00').toISOString() : null

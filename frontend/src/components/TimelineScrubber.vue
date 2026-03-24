@@ -51,7 +51,7 @@
     <!-- Empty state -->
     <div v-if="!loading && positioned.length === 0"
          class="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm pointer-events-none z-0">
-      No events for today
+      No events for this day
     </div>
 
     <!-- Hover tooltip -->
@@ -119,10 +119,8 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import API from '../api'
 
 const props = defineProps({
-  filter:     String,
-  camera:     String,
-  customFrom: String,
-  customTo:   String,
+  date:   String,    // 'YYYY-MM-DD' — which day to show
+  camera: String,
 })
 
 /* ── layout constants (px) ── */
@@ -150,16 +148,18 @@ function nowWIB () {
   const d = new Date()
   return new Date(d.getTime() + (d.getTimezoneOffset() + WIB) * 60000)
 }
-function todayStartISO () {
+function pad (n) { return String(n).padStart(2, '0') }
+
+function dayStartISO () {
+  if (props.date) return `${props.date}T00:00:00`
   const n = nowWIB()
   return `${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}T00:00:00`
 }
-function todayEndISO () {
-  const n = nowWIB()
-  const t = new Date(n); t.setDate(t.getDate() + 1)
+function dayEndISO () {
+  const base = props.date ? new Date(props.date + 'T00:00:00') : nowWIB()
+  const t = new Date(base); t.setDate(t.getDate() + 1)
   return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}T00:00:00`
 }
-function pad (n) { return String(n).padStart(2, '0') }
 
 /* ── coordinate mapping ── */
 const usable  = computed(() => cW.value - PAD * 2)
@@ -181,7 +181,7 @@ const scrubTimeStr = computed(() => {
 async function fetchEvents () {
   loading.value = true
   try {
-    const params = { limit: 5000, start_date: todayStartISO(), end_date: todayEndISO() }
+    const params = { limit: 5000, start_date: dayStartISO(), end_date: dayEndISO() }
     if (props.camera && props.camera !== 'all') params.camera_id = props.camera
     const { data } = await API.get('/events', { params })
     events.value = data.map(e => ({ ...e, hasFrame: true }))
@@ -305,7 +305,7 @@ onUnmounted(() => {
   document.removeEventListener('touchend', onTouchEnd)
 })
 
-watch(() => [props.filter, props.camera, props.customFrom, props.customTo], fetchEvents)
+watch(() => [props.date, props.camera], fetchEvents)
 </script>
 
 <style scoped>
