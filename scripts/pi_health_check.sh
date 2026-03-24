@@ -3,9 +3,10 @@ LOG=/home/birmas1/birmas/logs/pi_health.log
 mkdir -p /home/birmas1/birmas/logs
 
 ISSUES=""
-# Check services
+# Check services — treat "activating" as OK (service is starting up)
 for svc in ffmpeg-publisher inference wg-quick@wg0; do
-    if ! systemctl is-active --quiet $svc; then
+    STATE=$(systemctl is-active $svc 2>/dev/null)
+    if [ "$STATE" != "active" ] && [ "$STATE" != "activating" ]; then
         ISSUES="$ISSUES $svc-down"
     fi
 done
