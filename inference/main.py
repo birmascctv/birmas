@@ -24,6 +24,23 @@ API_ENDPOINT   = os.getenv("API_ENDPOINT", "")
 MODEL_PATH     = os.getenv("MODEL_PATH", "models/best.pt")
 INFER_INTERVAL = float(os.getenv("INFER_INTERVAL", "0"))  # min seconds between inferences (0 = max speed)
 LOG_TTL        = float(os.getenv("LOG_TTL", "10"))         # seconds before product marked sold
+
+# ── Model validation ──
+if not os.path.isfile(MODEL_PATH):
+    print(f"[FATAL] Model not found: {MODEL_PATH}")
+    print(f"[FATAL] Working dir: {os.getcwd()}")
+    sys.exit(1)
+else:
+    model_size = os.path.getsize(MODEL_PATH) / (1024*1024)
+    print(f"[INFO] Model OK: {MODEL_PATH} ({model_size:.1f} MB)")
+
+if not STREAM_URL:
+    print("[FATAL] STREAM_URL not set")
+    sys.exit(1)
+
+if not API_ENDPOINT:
+    print("[FATAL] API_ENDPOINT not set")
+    sys.exit(1)
 STARTUP_GRACE  = 60.0  # first 60s: all new tracks are "added" (not "restock")
 
 def _parse_zone(env_val):

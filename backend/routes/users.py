@@ -47,7 +47,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         logger.warning(f"Failed login attempt for {user.username}")
         raise HTTPException(status_code=400, detail="Invalid credentials")
     
-    SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
+    SECRET_KEY = os.getenv("SECRET_KEY", "B1rm4sC4m3r4")
     token = jwt.encode({"sub": str(db_user.id), "username": db_user.username}, SECRET_KEY, algorithm="HS256")
     return {"access_token": token, "token_type": "bearer"}
 

@@ -3,7 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.events import router as event_router
 from backend.routes.users import router as user_router
 from backend.routes.stats import router as stats_router
-import json
+import json, logging, os
+from logging.handlers import RotatingFileHandler
+
+# ── Logging setup ──────────────────────────────────────────────────────────────
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+file_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, 'backend.log'), maxBytes=5_000_000, backupCount=5
+)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s %(name)s: %(message)s'
+))
+logging.getLogger('uvicorn').addHandler(file_handler)
+logging.getLogger('uvicorn.access').addHandler(file_handler)
 
 class ConnectionManager:
     def __init__(self):
@@ -34,7 +47,13 @@ app.state.manager = manager
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://170.64.149.147",
+        "http://170.64.149.147:5173",
+        "https://170.64.149.147",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
