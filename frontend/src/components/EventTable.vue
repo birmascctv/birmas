@@ -85,10 +85,12 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import API from '../api'
 
 const props = defineProps({
-  camera:     { type: String, default: 'cam1' },
-  filter:     { type: String, default: 'day' },
-  customFrom: { type: String, default: null },
-  customTo:   { type: String, default: null },
+  camera:        { type: String,  default: 'cam1' },
+  filter:        { type: String,  default: 'day' },
+  customFrom:    { type: String,  default: null },
+  customTo:      { type: String,  default: null },
+  minConfidence: { type: Number,  default: 0 },
+  filterStatus:  { type: String,  default: 'all' },
 })
 
 // Human-readable status labels
@@ -116,7 +118,7 @@ const currentPage = ref(1)
 const pageSize = 10
 const newEventIds = ref(new Set())
 
-watch(() => [props.camera, props.filter, props.customFrom, props.customTo], () => {
+watch(() => [props.camera, props.filter, props.customFrom, props.customTo, props.minConfidence, props.filterStatus], () => {
   currentPage.value = 1
   loadEvents()
 })
@@ -135,6 +137,8 @@ async function loadEvents() {
     if (props.filter === 'custom' && props.customTo) params.end_date = props.customTo
     if (props.camera !== 'all') params.camera_id = props.camera
     params.limit = LIMIT_MAP[props.filter] || 50
+    if (props.minConfidence > 0) params.min_confidence = props.minConfidence / 100
+    if (props.filterStatus !== 'all') params.event_type = props.filterStatus
     const res = await API.get('/events', { params })
     events.value = res.data
   } catch (_) {}
@@ -149,6 +153,9 @@ ws.onmessage = (msg) => {
   if (props.camera !== 'all' && ev.camera_id !== props.camera) return
   const cutoff = new Date(getStartDate(props.filter)).getTime()
   if (ev.ts && new Date(ev.ts).getTime() < cutoff) return
+  // Apply confidence and status filters to live events too
+  if (props.minConfidence > 0 && (ev.confidence || 0) < props.minConfidence / 100) return
+  if (props.filterStatus !== 'all' && ev.event_type !== props.filterStatus) return
   events.value.unshift(ev)
   // Track new event for flash animation
   newEventIds.value = new Set([...newEventIds.value, ev.id])

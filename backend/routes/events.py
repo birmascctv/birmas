@@ -73,12 +73,13 @@ async def get_frame(event_id: int):
 
 @router.get("/events", response_model=list[EventOut])
 async def get_events(
-    camera_id:  str | None = None,
-    start_date: str | None = None,
-    end_date:     str | None = None,
-    event_type:   str | None = None,
-    product_name: str | None = None,
-    limit:        int = 500,
+    camera_id:      str | None   = None,
+    start_date:     str | None   = None,
+    end_date:       str | None   = None,
+    event_type:     str | None   = None,
+    product_name:   str | None   = None,
+    min_confidence: float | None = None,
+    limit:          int = 500,
     db: Session = Depends(get_db)
 ):
     q = db.query(Event)
@@ -92,6 +93,8 @@ async def get_events(
         q = q.filter(Event.event_type == event_type)
     if product_name:
         q = q.filter(Event.product_name == product_name)
+    if min_confidence is not None:
+        q = q.filter(Event.confidence >= min_confidence)
     return q.order_by(Event.ts.desc()).limit(min(limit, 5000)).all()
 
 

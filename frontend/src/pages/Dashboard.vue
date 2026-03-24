@@ -128,6 +128,25 @@
                class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
       </template>
 
+      <!-- Status filter -->
+      <select v-model="filterStatus"
+              class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+        <option value="all">All Status</option>
+        <option value="added">Detected</option>
+        <option value="sold">Sold</option>
+        <option value="restock">Restocked</option>
+      </select>
+
+      <!-- Confidence filter -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Conf ≥</span>
+        <input type="range" min="0" max="99" step="1" v-model.number="minConfidence"
+               class="w-20 h-1.5 accent-red-600 cursor-pointer" />
+        <span class="text-xs font-medium w-8 text-gray-700 dark:text-gray-200">{{ minConfidence }}%</span>
+        <button v-if="minConfidence > 0" @click="minConfidence = 0"
+                class="text-xs text-gray-400 hover:text-red-500 leading-none">✕</button>
+      </div>
+
       <!-- Cam toggle -->
       <div class="ml-auto flex items-center gap-2 select-none">
         <span class="text-sm font-medium" :class="!showAllCams ? 'text-red-600' : 'text-gray-400'">
@@ -152,6 +171,8 @@
           :camera="showAllCams ? 'all' : selectedCam"
           :customFrom="activeFilter === 'custom' ? customFromISO : null"
           :customTo="activeFilter === 'custom' ? customToISO : null"
+          :minConfidence="minConfidence"
+          :filterStatus="filterStatus"
         />
       </div>
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
@@ -193,6 +214,8 @@ const activeFilter = ref('month')
 const showAllCams  = ref(false)
 const customFrom   = ref('')
 const customTo     = ref('')
+const filterStatus = ref('all')
+const minConfidence = ref(0)
 const idleWarning  = ref(false)
 
 // Timeline date (WIB)
