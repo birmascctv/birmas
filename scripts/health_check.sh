@@ -2,15 +2,26 @@
 # Birmas Health Check & Alerting
 # Runs every 5 minutes via cron, logs to /root/birmas/logs/health.log
 #
-# SETUP TELEGRAM ALERTS:
-#   1. Open Telegram, search @BotFather, send /newbot, copy the token
-#   2. Start a chat with your new bot, then visit:
-#      https://api.telegram.org/bot<TOKEN>/getUpdates
-#      Find "chat":{"id":XXXXXXX} — that is your CHAT_ID
-#   3. Fill in the two variables below and save this file
+# HOW TO ENABLE EMAIL ALERTS (Gmail):
+#   1. Go to https://myaccount.google.com/security
+#   2. Make sure 2-Step Verification is ON (required for App Passwords)
+#   3. Go to https://myaccount.google.com/apppasswords
+#   4. Create a new App Password (name it "Birmas Server")
+#   5. Copy the 16-character password (e.g. abcd efgh ijkl mnop)
+#   6. Open /root/birmas/.env and set:
+#        ALERT_EMAIL_APP_PASSWORD=abcdefghijklmnop   (no spaces)
+#   That's it — email alerts activate automatically.
+#
+# NOTE: Your regular Gmail password does NOT work here. Gmail requires
+#       App Passwords for SMTP. This is a Google security requirement.
 
-TELEGRAM_BOT_TOKEN=""
-TELEGRAM_CHAT_ID=""
+# Load credentials from .env (keeps passwords out of this script/git)
+ENV_FILE="/root/birmas/.env"
+if [ -f "$ENV_FILE" ]; then
+    ALERT_EMAIL_FROM=$(grep    '^ALERT_EMAIL_FROM='         "$ENV_FILE" | cut -d= -f2-)
+    ALERT_EMAIL_TO=$(grep      '^ALERT_EMAIL_TO='           "$ENV_FILE" | cut -d= -f2-)
+    ALERT_EMAIL_APP_PASSWORD=$(grep '^ALERT_EMAIL_APP_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)
+fi
 
 LOG="/root/birmas/logs/health.log"
 NOW=$(date '+%Y-%m-%d %H:%M:%S')
@@ -37,16 +48,37 @@ send_alert() {
     local key="$1"
     local msg="$2"
     echo "[$NOW] ALERT: $msg" >> "$LOG"
-    if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+    if [ -n "$ALERT_EMAIL_APP_PASSWORD" ] && [ -n "$ALERT_EMAIL_TO" ]; then
         if _can_alert "$key"; then
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                -d chat_id="$TELEGRAM_CHAT_ID" \
-                -d text="🚨 *Birmas Alert*
-$msg
+            python3 -c "
+import smtplib, os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+msg = MIMEMultipart()
+msg['From']    = '${ALERT_EMAIL_FROM}'
+msg['To']      = '${ALERT_EMAIL_TO}'
+msg['Subject'] = '[Birmas] Alert: ${key}'
+body = '''🚨 BIRMAS ALERT
 
+Issue : ${msg}
 Server: 170.64.149.147
-Time: $NOW" \
-                -d parse_mode="Markdown" > /dev/null 2>&1
+Time  : ${NOW}
+
+---
+This is an automated alert from your Birmas monitoring system.
+Check https://170.64.149.147/dashboard for details.
+'''
+msg.attach(MIMEText(body, 'plain'))
+try:
+    s = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+    s.starttls()
+    s.login('${ALERT_EMAIL_FROM}', '${ALERT_EMAIL_APP_PASSWORD}')
+    s.sendmail('${ALERT_EMAIL_FROM}', '${ALERT_EMAIL_TO}', msg.as_string())
+    s.quit()
+    print('email sent')
+except Exception as e:
+    print(f'email failed: {e}')
+" >> "$LOG" 2>&1
         fi
     fi
 }
@@ -57,14 +89,31 @@ send_recovery() {
     local stamp_file="${COOLDOWN_FILE}_${key}"
     echo "[$NOW] RECOVERY: $msg" >> "$LOG"
     rm -f "$stamp_file"  # reset cooldown so next failure alerts immediately
-    if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="$TELEGRAM_CHAT_ID" \
-            -d text="✅ *Birmas Recovered*
-$msg
+    if [ -n "$ALERT_EMAIL_APP_PASSWORD" ] && [ -n "$ALERT_EMAIL_TO" ]; then
+        python3 -c "
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+msg = MIMEMultipart()
+msg['From']    = '${ALERT_EMAIL_FROM}'
+msg['To']      = '${ALERT_EMAIL_TO}'
+msg['Subject'] = '[Birmas] Recovered: ${key}'
+body = '''✅ BIRMAS RECOVERED
 
-Time: $NOW" \
-            -d parse_mode="Markdown" > /dev/null 2>&1
+Status: ${msg}
+Server: 170.64.149.147
+Time  : ${NOW}
+'''
+msg.attach(MIMEText(body, 'plain'))
+try:
+    s = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+    s.starttls()
+    s.login('${ALERT_EMAIL_FROM}', '${ALERT_EMAIL_APP_PASSWORD}')
+    s.sendmail('${ALERT_EMAIL_FROM}', '${ALERT_EMAIL_TO}', msg.as_string())
+    s.quit()
+except Exception as e:
+    print(f'email failed: {e}')
+" >> "$LOG" 2>&1
     fi
 }
 
