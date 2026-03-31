@@ -94,17 +94,19 @@ const props = defineProps({
 })
 
 // Human-readable status labels
-const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked' }
+const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked', missing: 'Missing' }
 const STATUS_CLASSES = {
   added:   'bg-red-100 text-red-700',
   sold:    'bg-green-100 text-green-700',
   restock: 'bg-blue-100 text-blue-700',
+  missing: 'bg-orange-100 text-orange-700',
 }
 // Row colors: light mode uses soft tint (100-shade), dark mode uses low-opacity deep shade
 const ROW_CLASSES = {
-  added:   'bg-red-50   dark:bg-red-950/40',
+  added:   'bg-red-50    dark:bg-red-950/40',
   sold:    'bg-green-100 dark:bg-green-800/40',
   restock: 'bg-blue-100  dark:bg-blue-800/40',
+  missing: 'bg-orange-50 dark:bg-orange-950/40',
 }
 function statusLabel(type) { return STATUS_LABELS[type] || type || '—' }
 function statusClass(type) { return STATUS_CLASSES[type] || 'bg-gray-100 text-gray-600' }

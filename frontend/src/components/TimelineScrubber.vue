@@ -237,16 +237,16 @@ function nearScrubber (ev) {
   return Math.abs(ev.frac - scrubFrac.value) < SNAP_H / 24
 }
 function colorBg (t) {
-  return t === 'sold' ? 'bg-green-500' : t === 'restock' ? 'bg-blue-500' : 'bg-red-500'
+  return t === 'sold' ? 'bg-green-500' : t === 'restock' ? 'bg-blue-500' : t === 'missing' ? 'bg-orange-500' : 'bg-red-500'
 }
 function colorText (t) {
-  return t === 'sold' ? 'text-green-600' : t === 'restock' ? 'text-blue-600' : 'text-red-600'
+  return t === 'sold' ? 'text-green-600' : t === 'restock' ? 'text-blue-600' : t === 'missing' ? 'text-orange-600' : 'text-red-600'
 }
 function badgeBg (t) {
-  return t === 'sold' ? 'bg-green-600' : t === 'restock' ? 'bg-blue-600' : 'bg-red-600'
+  return t === 'sold' ? 'bg-green-600' : t === 'restock' ? 'bg-blue-600' : t === 'missing' ? 'bg-orange-600' : 'bg-red-600'
 }
 function label (t) {
-  return t === 'sold' ? 'Sold' : t === 'restock' ? 'Restocked' : 'Detected'
+  return t === 'sold' ? 'Sold' : t === 'restock' ? 'Restocked' : t === 'missing' ? 'Missing' : 'Detected'
 }
 function frameUrl (id) { return `/api/frames/${id}` }
 function fmtTime (ts) {

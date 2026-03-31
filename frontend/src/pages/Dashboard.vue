@@ -135,6 +135,7 @@
         <option value="added">Detected</option>
         <option value="sold">Sold</option>
         <option value="restock">Restocked</option>
+        <option value="missing">Missing</option>
       </select>
 
       <!-- Confidence filter -->
