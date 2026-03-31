@@ -26,7 +26,7 @@ class Event(Base):
     product_brand = Column(String)
     product_name  = Column(String)
     confidence    = Column(Float)
-    event_type    = Column(String, default="added")  # "added" | "restock" | "sold"
+    event_type    = Column(String, default="added")  # "added" | "restock" | "sold" | "missing"
 
 class Product(Base):
     __tablename__ = "product"
