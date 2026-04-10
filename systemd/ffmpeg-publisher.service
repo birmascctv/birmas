@@ -1,12 +1,13 @@
 [Unit]
 Description=FFmpeg Publisher Camera to Server MediaMTX
-After=network.target
+After=network-online.target wg-quick@wg0.service
+Wants=wg-quick@wg0.service
 
 [Service]
 EnvironmentFile=/home/birmas1/birmas/.env
 ExecStart=/bin/sh -c '/usr/bin/ffmpeg -rtsp_transport tcp -i "$STREAM_URL" -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw'
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
