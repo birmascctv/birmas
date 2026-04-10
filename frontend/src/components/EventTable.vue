@@ -24,11 +24,7 @@
         <tr v-for="ev in paginatedEvents" :key="ev.id"
             :class="[rowClass(ev.event_type), newEventIds.has(ev.id) ? 'new-row' : '']">
           <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-700 dark:text-gray-200">
-            {{
-              ev.ts
-                ? new Date(ev.ts).toISOString().replace('T', ' ').split('.')[0]
-                : '—'
-            }}
+            {{ fmtDate(ev.ts) }}
           </td>
           <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">{{ ev.camera_id || '—' }}</td>
           <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 dark:text-gray-200">{{ ev.product_brand || '—' }}</td>
@@ -112,6 +108,20 @@ function statusLabel(type) { return STATUS_LABELS[type] || type || '—' }
 function statusClass(type) { return STATUS_CLASSES[type] || 'bg-gray-100 text-gray-600' }
 function rowClass(type)    { return ROW_CLASSES[type]    || '' }
 
+// Format timestamp as DD/MM/YYYY HH:MM:SS
+function fmtDate(ts) {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  if (isNaN(d)) return '—'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${dd}/${mm}/${yy} ${hh}:${mi}:${ss}`
+}
+
 // Row limit per filter period
 const LIMIT_MAP = { day: 50, week: 150, month: 500, '3months': 1000, year: 5000, custom: 2000 }
 
@@ -173,7 +183,7 @@ onUnmounted(() => ws.close())
 function exportCSV() {
   const header = ['Time', 'Camera', 'Brand', 'Product', 'Confidence', 'Status']
   const rows = events.value.map(ev => [
-    ev.ts ? new Date(ev.ts).toISOString().replace('T', ' ').split('.')[0] : '',
+    fmtDate(ev.ts),
     ev.camera_id || '',
     ev.product_brand || '',
     ev.product_name || '',
@@ -185,7 +195,7 @@ function exportCSV() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
-  const today = new Date().toISOString().split('T')[0]
+  const today = (() => { const d = new Date(); return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}` })()
   a.href = url
   a.download = `events_${props.filter}_${props.camera}_${today}.csv`
   a.click()

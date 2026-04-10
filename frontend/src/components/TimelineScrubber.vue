@@ -250,8 +250,16 @@ function label (t) {
 }
 function frameUrl (id) { return `/api/frames/${id}` }
 function fmtTime (ts) {
-  const t = (ts || '').split('T')[1] || ''
-  return t.substring(0, 8)
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d)) return ''
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${dd}/${mm}/${yy} ${hh}:${mi}:${ss}`
 }
 
 /* ── tooltip (anchored to dot position) ── */
