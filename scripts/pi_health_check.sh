@@ -17,7 +17,7 @@ if ! ping -c 1 -W 3 10.0.0.1 > /dev/null 2>&1; then
 fi
 
 # Check camera reachable
-if ! ping -c 1 -W 3 192.168.68.101 > /dev/null 2>&1; then
+if ! ping -c 1 -W 3 192.168.1.101 > /dev/null 2>&1; then
     ISSUES="$ISSUES camera-unreachable"
 fi
 
