@@ -29,8 +29,8 @@ Thumbs.db
 # Database files
 /storage/*.db
 
-# Model weights (optional, if large)
-/inference/models/*.pt
+# Model weights — never commit .pt files, upload manually
+*.pt
 
 # Temporary files
 *.tmp
