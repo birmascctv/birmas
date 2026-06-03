@@ -37,3 +37,8 @@ Thumbs.db
 venv/
 backend/routes/__pycache__/
 backups/
+
+# Training result artifacts
+*.csv
+*.png
+*.jpg
