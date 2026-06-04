@@ -6,7 +6,7 @@ After=network.target
 User=birmas1
 WorkingDirectory=/home/birmas1/birmas/inference
 ExecStart=/home/birmas1/birmas/venv/bin/python -u /home/birmas1/birmas/inference/main.py
-Environment="STREAM_URL=rtsp://admin:MasBirTebet1@192.168.1.101:554/Streaming/Channels/101"
+Environment="STREAM_URL=rtsp://admin:B1rm4sC4m3r4@192.168.1.101:554/Streaming/Channels/101"
 Environment="API_ENDPOINT=http://10.0.0.1:8000/api/events"
 Environment="MODEL_PATH=./models/best.pt"
 Environment="INFER_INTERVAL=0"
