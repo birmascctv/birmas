@@ -207,7 +207,7 @@ import API from '../api'
 const { dark, toggleDark } = useDarkMode()
 
 const cameras = [
-  { id: 'cam1', name: 'Tebet', thumbnail: '/images/tebet.jpg' },
+  { id: 'cam1', name: 'Sudirman', thumbnail: '/images/sudirman.jpg' },
 ]
 
 const selectedCam  = ref('cam1')
