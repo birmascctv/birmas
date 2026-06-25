@@ -5,7 +5,7 @@ Wants=wg-quick@wg0.service
 
 [Service]
 EnvironmentFile=/home/birmas1/birmas/.env
-ExecStart=/bin/sh -c '/usr/bin/ffmpeg -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 30 -rtsp_transport tcp -i "$STREAM_URL" -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw'
+ExecStart=/bin/sh -c '/usr/bin/ffmpeg -rtsp_transport tcp -i "$STREAM_URL" -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw'
 Restart=always
 RestartSec=10
 
