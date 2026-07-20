@@ -23,7 +23,29 @@ STREAM_URL     = os.getenv("STREAM_URL", "")
 API_ENDPOINT   = os.getenv("API_ENDPOINT", "")
 MODEL_PATH     = os.getenv("MODEL_PATH", "models/best.pt")
 INFER_INTERVAL = float(os.getenv("INFER_INTERVAL", "0"))  # min seconds between inferences (0 = max speed)
-LOG_TTL        = float(os.getenv("LOG_TTL", "10"))         # seconds before product marked sold
+
+# LOG_TTL: seconds of continuous absence before a tracked product is marked
+# "sold". Must be comfortably larger than REID_WINDOW below — otherwise a
+# product that's only briefly occluded (a customer's hand, someone leaning
+# over the table, etc.) would get marked sold before the tracker even has a
+# chance to re-identify it as the same item. Bumped from 10s -> 20s for the
+# dine-in area, where drinks sit in/out of camera view much longer than a
+# quick fridge grab-and-go would.
+LOG_TTL        = float(os.getenv("LOG_TTL", "20"))
+
+# REID_WINDOW: seconds a lost track is kept around for re-identification by
+# ProductTracker before being permanently forgotten. Prevents a momentary
+# occlusion from being reported as "sold" + a new "added" for the same
+# physical item seconds later (the main cause of timeline dot spam in a
+# dine-in setting where people sit with their drink for a while).
+REID_WINDOW    = float(os.getenv("REID_WINDOW", "10"))
+
+# CONFIRM_SECONDS: a new track must be seen continuously for at least this
+# long before an "added"/"restock" event is actually posted. Filters out
+# one-off flicker/false-positive detections (a single bad frame) so they
+# never reach the timeline at all — instead of posting immediately on the
+# very first frame a track is seen.
+CONFIRM_SECONDS = float(os.getenv("CONFIRM_SECONDS", "1.5"))
 
 # ── Model validation ──
 if not os.path.isfile(MODEL_PATH):
@@ -69,7 +91,8 @@ FRIDGE_ZONE = _parse_zone(os.getenv("FRIDGE_ZONE", "560,0,780,230"))
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
 print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
-print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s  FRIDGE_ZONE={FRIDGE_ZONE}")
+print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s  "
+      f"REID_WINDOW={REID_WINDOW}s  CONFIRM_SECONDS={CONFIRM_SECONDS}s  FRIDGE_ZONE={FRIDGE_ZONE}")
 
 IMG_SIZE = 640
 # ----------------------------------------
@@ -113,8 +136,15 @@ model.model.eval()
 print("Model loaded:", model.names)
 
 # ---------------- INIT TRACKER ----------------
-tracker     = ProductTracker(fps=30)
-seen_tracks = {}   # {track_id: {"last_seen": float, "label": str}}
+tracker     = ProductTracker(lost_ttl=REID_WINDOW)
+# seen_tracks[track_id] = {
+#   "label": str, "first_seen": float, "last_seen": float,
+#   "posted": bool,           -- has an added/restock event actually been sent?
+#   "origin_bbox": str,       -- bbox at first detection, used for the zone check
+#   "bbox": str,              -- most recent bbox, used to annotate the "sold" frame
+#   "frame": np.ndarray,      -- most recent frame, used to annotate the "sold" frame
+# }
+seen_tracks = {}
 frame_count = 0
 start_time  = time.time()
 
@@ -222,28 +252,53 @@ while True:
                         f"{obj['bbox'][2]:.1f},{obj['bbox'][3]:.1f}")
 
             if tid not in seen_tracks:
+                # New track — don't post yet. Wait for CONFIRM_SECONDS of
+                # continuous tracking so a single flicker/false-positive
+                # frame never reaches the dashboard timeline.
+                seen_tracks[tid] = {
+                    "label":       label,
+                    "first_seen":  now,
+                    "last_seen":   now,
+                    "posted":      False,
+                    "origin_bbox": bbox,
+                    "bbox":        bbox,
+                    "frame":       frame,
+                }
+            else:
+                seen_tracks[tid]["last_seen"] = now
+                seen_tracks[tid]["bbox"]      = bbox
+                seen_tracks[tid]["frame"]     = frame
+
+            tr = seen_tracks[tid]
+            if not tr["posted"] and (now - tr["first_seen"]) >= CONFIRM_SECONDS:
                 if in_startup:
                     event_type = "added"
                 elif FRIDGE_ZONE is not None:
                     # Zone-based: product appeared from fridge area = customer taking product
                     # Product appeared from outside fridge = restock
-                    event_type = "added" if _in_zone(obj["bbox"], FRIDGE_ZONE) else "restock"
+                    origin_coords = list(map(float, tr["origin_bbox"].split(",")))
+                    event_type = "added" if _in_zone(origin_coords, FRIDGE_ZONE) else "restock"
                 else:
                     # Fallback: first of this class = added, duplicate class = restock
-                    same_class_active = any(v["label"] == label for v in seen_tracks.values())
+                    same_class_active = any(
+                        v["label"] == label and v["posted"] for v in seen_tracks.values()
+                    )
                     event_type = "added" if not same_class_active else "restock"
-                post_event(event_type, label, bbox, float(obj["confidence"]), frame_img=frame)
+                post_event(event_type, label, tr["origin_bbox"], float(obj["confidence"]), frame_img=tr["frame"])
                 print(f"[{event_type.upper()}] {label} (track {tid})")
-                seen_tracks[tid] = {"last_seen": now, "label": label}
-            else:
-                seen_tracks[tid]["last_seen"] = now
+                tr["posted"] = True
 
         # -------- PRODUCT SOLD --------
         for tid in list(seen_tracks.keys()):
-            if now - seen_tracks[tid]["last_seen"] > LOG_TTL:
-                label = seen_tracks[tid]["label"]
-                post_event("sold", label, "", 0.0)
-                print(f"[SOLD] {label} (track {tid})")
+            tr = seen_tracks[tid]
+            if now - tr["last_seen"] > LOG_TTL:
+                # Only report "sold" for tracks that were actually confirmed/
+                # posted as added or restocked — an unconfirmed blip that
+                # disappears again is noise, not a real detection, so it's
+                # silently dropped instead of adding an orphan "sold" event.
+                if tr["posted"]:
+                    post_event("sold", tr["label"], tr["bbox"], 0.0, frame_img=tr["frame"])
+                    print(f"[SOLD] {tr['label']} (track {tid})")
                 del seen_tracks[tid]
 
     except Exception as e:

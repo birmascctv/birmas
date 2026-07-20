@@ -10,7 +10,9 @@ Environment="STREAM_URL=rtsp://admin:B1rm4sC4m3r4@192.168.0.101:554/Streaming/Ch
 Environment="API_ENDPOINT=http://10.0.0.1:8000/api/events"
 Environment="MODEL_PATH=./models/best.pt"
 Environment="INFER_INTERVAL=0"
-Environment="LOG_TTL=10"
+Environment="LOG_TTL=20"
+Environment="REID_WINDOW=10"
+Environment="CONFIRM_SECONDS=1.5"
 Environment="FRIDGE_ZONE="
 Restart=always
 RestartSec=5
