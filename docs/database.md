@@ -23,7 +23,7 @@ erDiagram
         varchar product_brand "denormalized from PRODUCT at insert time"
         varchar product_name "denormalized from PRODUCT at insert time"
         float confidence
-        varchar event_type "added | restock | sold | missing"
+        varchar event_type "added | restock | sold  (missing is not currently emitted)"
     }
     PRODUCT {
         int class_id PK "matches YOLO model's class index"
@@ -55,7 +55,7 @@ Only 2 rows currently exist (dashboard operator accounts). Created via
 | `bbox` | varchar | — | string-encoded bounding box, e.g. `"[x1,y1,x2,y2]"` |
 | `product_brand` / `product_name` | varchar | — | denormalized copy of the matching `product` row, resolved once at insert time (so historical events keep their labels even if `product` mapping changes later) |
 | `confidence` | float | — | YOLO detection confidence |
-| `event_type` | varchar | ✓ | `added` \| `restock` \| `sold` \| `missing` — decided by `inference/tracker.py`'s dwell/zone logic |
+| `event_type` | varchar | ✓ | `added` \| `restock` \| `sold` — decided by `inference/main.py` (added/restock via `FRIDGE_ZONE`, sold via `LOG_TTL` disappearance timeout). `missing` appears in older docs/diagrams but is not currently emitted anywhere in code. |
 
 3,225 rows currently — this is the fast-growing table. Indexes are already
 in place for the query patterns the API uses (`camera_id`, `event_type`,
@@ -65,17 +65,31 @@ in place for the query patterns the API uses (`camera_id`, `event_type`,
 ### `product`
 | Column | Type | Notes |
 |---|---|---|
-| `class_id` | int, PK | matches the YOLO model's output class index — **must stay in sync with whatever `best.pt` is currently deployed** |
-| `class_name` | varchar | YOLO class name (e.g. `ot_apihjB`) — matched against `Event.label` at insert time |
+| `class_id` | int | matches the YOLO model's output class index — **must stay in sync with whatever `best.pt` is currently deployed**. **Not a real primary key** — `class_id` is reused across different brand/dataset batches (e.g. Orang Tua's `class_id=0` and Sababay's `class_id=0` are different rows), so it cannot have a unique/PK constraint at the table level. |
+| `class_name` | varchar, **UNIQUE** | YOLO class name (e.g. `ot_apihjB`) — this is the actual lookup key matched against `Event.label` at insert time. A `product_class_name_uniq` constraint was added 2026-07-20 since this is the real identity column. |
 | `product_brand` | varchar | human-readable brand for the dashboard |
 | `product_name` | varchar | human-readable product name for the dashboard |
 
-105 rows — one per trained product class. **This table is the bridge
-between the YOLO model's numeric/coded classes and human-readable labels
-shown on the dashboard.** If you retrain the model with new/renamed/
-reordered classes, this table must be updated to match, or new detections
-will show `product_brand = "Unknown"` (see fallback logic in
+109 rows — one per trained product class across all brands. **This table
+is the bridge between the YOLO model's numeric/coded classes and
+human-readable labels shown on the dashboard.** If you retrain the model
+with new/renamed/reordered classes, this table must be updated to match
+(`class_name` values, specifically), or new detections will show
+`product_brand = "Unknown"` (see fallback logic in
 `backend/routes/events.py::post_event`).
+
+**2026-07-20 incident**: 12 Orang Tua rows had a stale `01ot_` prefix on
+`class_name` that never matched the deployed model's actual `ot_`-prefixed
+class names, and 4 of the model's 16 classes had no row at all — both
+caused 100% of Orang Tua events (12,972 rows) to show `product_brand =
+"Unknown"`. Fixed via `scripts/2026-07-20_fix_product_classnames.sql`,
+which also backfilled the historical `events` rows (see below — the
+brand/name are copied onto `Event` at insert time, not joined live, so
+fixing `product` alone does not retroactively fix old event rows). Two of
+the newly added rows (`ot_apibcB`, `ot_atlaspB`) and one existing
+(`ot_gintB`) have **unconfirmed/best-guess product names** pending owner
+verification — check the `product` table for `"unconfirmed"` in
+`product_name`.
 
 ## Where the schema lives and how it's created
 
@@ -106,6 +120,39 @@ This is comfortable for the current single-Pi, low-concurrency dashboard
 load, but **should be revisited if multiple Pi devices are added** and
 each POSTs events frequently, plus multiple dashboard browser sessions
 querying simultaneously (see `docs/multi-device-scaling.md`).
+
+## Connecting with an external GUI client (DBeaver, etc.)
+
+Postgres is deliberately configured to **only listen on `localhost`**
+(`listen_addresses = 'localhost'` in `postgresql.conf`) — it is never
+exposed on the server's public interface, regardless of what
+`pg_hba.conf` allows. This is intentional: it means the database can
+never be reached directly from the internet, even if someone knows the
+password, without also having valid SSH access to the server.
+
+To connect from a local GUI client, use an **SSH tunnel**, not a direct
+connection:
+
+1. In DBeaver, create a new PostgreSQL connection.
+2. **Main tab**: Host = `localhost` (or `127.0.0.1`) — **not** the
+   server's public IP. This is the address as seen *from the server
+   itself* once the tunnel is up, since that's where Postgres actually
+   listens. Port `5432`, Database `birmas`, Username `birmas_user`,
+   Password from the server's `/root/birmas/.env` (`DATABASE_URL`).
+3. **SSH tab**: enable "Use SSH Tunnel". Host/IP = `170.64.149.147`,
+   Port `22`, your normal SSH username/auth (key or password).
+4. Test the SSH tunnel first (DBeaver has a "Test Tunnel Configuration"
+   button), then test the full connection.
+
+**Common mistake**: leaving the Main tab's Host set to the public IP
+(`170.64.149.147`) while also enabling the SSH tunnel. DBeaver's tunnel
+makes the *SSH server* (the droplet) open the Main-tab host/port on its
+own behalf — pointing that at its own public IP (rather than `localhost`)
+means the droplet tries to connect to itself over an interface Postgres
+isn't listening on, which fails immediately (commonly surfaces as an
+`EOFException` in the JDBC driver, since the TCP connection is refused
+right after the handshake begins). Setting Main-tab Host to `localhost`
+fixes this.
 
 ## Data growth & retention
 

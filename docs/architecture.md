@@ -62,12 +62,39 @@ flowchart TB
   service (`Restart=always`), defined in `systemd/ffmpeg-publisher.service`.
 - **`inference.service`** — Python process (`inference/main.py`) that:
   1. Opens its own RTSP connection to the camera.
-  2. Runs YOLO (Ultralytics, `inference/models/best.pt`) per frame to detect
-     products.
+  2. Runs YOLO (Ultralytics, `inference/models/best.pt`, currently the
+     `01ot_v4` training run) per frame to detect products.
   3. Feeds detections into a lightweight local IoU-based tracker
-     (`inference/tracker.py`, class `ProductTracker`) to assign stable
-     track IDs and decide `added` / `restock` / `sold` transitions based on
-     dwell time (`LOG_TTL`) and/or a configured fridge zone (`FRIDGE_ZONE`).
+     (`inference/tracker.py`, class `ProductTracker`) which, besides normal
+     frame-to-frame IoU matching, keeps a wall-clock "lost pool" for
+     `REID_WINDOW` seconds (default 10s) — a track that briefly disappears
+     (occluded by a hand, a customer leaning over, etc.) is re-identified
+     as the *same* track instead of getting a new ID, which is what
+     prevents dine-in occlusions from spamming the timeline with
+     duplicate sold+added pairs.
+  4. `main.py` then decides the event type for each track:
+     - **added / restock** — decided once, the moment a track is first
+       *confirmed* (seen continuously for `CONFIRM_SECONDS`, default 1.5s,
+       to filter one-frame flicker). Zone-based: if the track's bbox on
+       first detection falls inside `FRIDGE_ZONE`, it's `added` (customer
+       took it from the fridge); outside the zone, it's `restock`
+       (product placed from elsewhere). There is currently no
+       "cashier zone" — see the note below.
+     - **sold** — purely a disappearance timeout, **not** zone-based. Once
+       a track has been confirmed (added/restock was posted), if it isn't
+       seen again for `LOG_TTL` seconds (default 20s, tuned for a dine-in
+       area where drinks sit around) it's reported "sold". This means
+       "sold" today really means "this product hasn't been seen by the
+       camera in 20+ seconds," not "this product was seen at checkout."
+       Unconfirmed tracks that vanish before `CONFIRM_SECONDS` never post
+       any event at all.
+  5. POSTs each event as JSON (including a base64-encoded JPEG frame
+     capture) to the backend's `/api/events` endpoint over the WireGuard
+     tunnel.
+
+  > **Planned improvement**: a true "sold at cashier" signal would need a
+  > cashier-facing zone/camera — see `docs/multi-device-scaling.md` for the
+  > two-camera (chiller + cashier) proposal being considered.
   4. POSTs each event as JSON (including a base64-encoded JPEG frame
      capture) to the backend's `/api/events` endpoint over the WireGuard
      tunnel.

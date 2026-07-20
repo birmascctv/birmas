@@ -11,6 +11,7 @@ This is a single-file merge of all system documentation, for easy export/reading
 - [Dashboard](#dashboard)
 - [Adding More Devices](#adding-more-devices)
 - [Developer Guide](#developer-guide)
+- [Moving to a Subdomain](#moving-to-a-subdomain)
 
 ---
 
@@ -78,12 +79,39 @@ flowchart TB
   service (`Restart=always`), defined in `systemd/ffmpeg-publisher.service`.
 - **`inference.service`** — Python process (`inference/main.py`) that:
   1. Opens its own RTSP connection to the camera.
-  2. Runs YOLO (Ultralytics, `inference/models/best.pt`) per frame to detect
-     products.
+  2. Runs YOLO (Ultralytics, `inference/models/best.pt`, currently the
+     `01ot_v4` training run) per frame to detect products.
   3. Feeds detections into a lightweight local IoU-based tracker
-     (`inference/tracker.py`, class `ProductTracker`) to assign stable
-     track IDs and decide `added` / `restock` / `sold` transitions based on
-     dwell time (`LOG_TTL`) and/or a configured fridge zone (`FRIDGE_ZONE`).
+     (`inference/tracker.py`, class `ProductTracker`) which, besides normal
+     frame-to-frame IoU matching, keeps a wall-clock "lost pool" for
+     `REID_WINDOW` seconds (default 10s) — a track that briefly disappears
+     (occluded by a hand, a customer leaning over, etc.) is re-identified
+     as the *same* track instead of getting a new ID, which is what
+     prevents dine-in occlusions from spamming the timeline with
+     duplicate sold+added pairs.
+  4. `main.py` then decides the event type for each track:
+     - **added / restock** — decided once, the moment a track is first
+       *confirmed* (seen continuously for `CONFIRM_SECONDS`, default 1.5s,
+       to filter one-frame flicker). Zone-based: if the track's bbox on
+       first detection falls inside `FRIDGE_ZONE`, it's `added` (customer
+       took it from the fridge); outside the zone, it's `restock`
+       (product placed from elsewhere). There is currently no
+       "cashier zone" — see the note below.
+     - **sold** — purely a disappearance timeout, **not** zone-based. Once
+       a track has been confirmed (added/restock was posted), if it isn't
+       seen again for `LOG_TTL` seconds (default 20s, tuned for a dine-in
+       area where drinks sit around) it's reported "sold". This means
+       "sold" today really means "this product hasn't been seen by the
+       camera in 20+ seconds," not "this product was seen at checkout."
+       Unconfirmed tracks that vanish before `CONFIRM_SECONDS` never post
+       any event at all.
+  5. POSTs each event as JSON (including a base64-encoded JPEG frame
+     capture) to the backend's `/api/events` endpoint over the WireGuard
+     tunnel.
+
+  > **Planned improvement**: a true "sold at cashier" signal would need a
+  > cashier-facing zone/camera — see `docs/multi-device-scaling.md` for the
+  > two-camera (chiller + cashier) proposal being considered.
   4. POSTs each event as JSON (including a base64-encoded JPEG frame
      capture) to the backend's `/api/events` endpoint over the WireGuard
      tunnel.
@@ -450,7 +478,7 @@ erDiagram
         varchar product_brand "denormalized from PRODUCT at insert time"
         varchar product_name "denormalized from PRODUCT at insert time"
         float confidence
-        varchar event_type "added | restock | sold | missing"
+        varchar event_type "added | restock | sold  (missing is not currently emitted)"
     }
     PRODUCT {
         int class_id PK "matches YOLO model's class index"
@@ -482,7 +510,7 @@ Only 2 rows currently exist (dashboard operator accounts). Created via
 | `bbox` | varchar | — | string-encoded bounding box, e.g. `"[x1,y1,x2,y2]"` |
 | `product_brand` / `product_name` | varchar | — | denormalized copy of the matching `product` row, resolved once at insert time (so historical events keep their labels even if `product` mapping changes later) |
 | `confidence` | float | — | YOLO detection confidence |
-| `event_type` | varchar | ✓ | `added` \| `restock` \| `sold` \| `missing` — decided by `inference/tracker.py`'s dwell/zone logic |
+| `event_type` | varchar | ✓ | `added` \| `restock` \| `sold` — decided by `inference/main.py` (added/restock via `FRIDGE_ZONE`, sold via `LOG_TTL` disappearance timeout). `missing` appears in older docs/diagrams but is not currently emitted anywhere in code. |
 
 3,225 rows currently — this is the fast-growing table. Indexes are already
 in place for the query patterns the API uses (`camera_id`, `event_type`,
@@ -492,17 +520,28 @@ in place for the query patterns the API uses (`camera_id`, `event_type`,
 #### `product`
 | Column | Type | Notes |
 |---|---|---|
-| `class_id` | int, PK | matches the YOLO model's output class index — **must stay in sync with whatever `best.pt` is currently deployed** |
-| `class_name` | varchar | YOLO class name (e.g. `ot_apihjB`) — matched against `Event.label` at insert time |
+| `class_id` | int | matches the YOLO model's output class index — **must stay in sync with whatever `best.pt` is currently deployed**. **Not a real primary key** — reused across different brand/dataset batches, so it cannot have a table-level unique/PK constraint. |
+| `class_name` | varchar, **UNIQUE** | YOLO class name (e.g. `ot_apihjB`) — the actual lookup key matched against `Event.label` at insert time. `product_class_name_uniq` constraint added 2026-07-20. |
 | `product_brand` | varchar | human-readable brand for the dashboard |
 | `product_name` | varchar | human-readable product name for the dashboard |
 
-105 rows — one per trained product class. **This table is the bridge
-between the YOLO model's numeric/coded classes and human-readable labels
-shown on the dashboard.** If you retrain the model with new/renamed/
-reordered classes, this table must be updated to match, or new detections
-will show `product_brand = "Unknown"` (see fallback logic in
+109 rows — one per trained product class across all brands. **This table
+is the bridge between the YOLO model's numeric/coded classes and
+human-readable labels shown on the dashboard.** If you retrain the model
+with new/renamed/reordered classes, this table must be updated to match
+(`class_name` specifically), or new detections will show
+`product_brand = "Unknown"` (see fallback logic in
 `backend/routes/events.py::post_event`).
+
+**2026-07-20 incident**: 12 Orang Tua rows had a stale `01ot_` prefix on
+`class_name` that never matched the deployed model's actual `ot_`-prefixed
+classes, and 4 of the model's 16 classes had no row at all — 100% of
+Orang Tua events (12,972 rows) showed `product_brand = "Unknown"`. Fixed
+via `scripts/2026-07-20_fix_product_classnames.sql`, which also backfilled
+the historical `events` rows (brand/name are copied onto `Event` at
+insert time, not joined live — fixing `product` alone doesn't retroactively
+fix old rows). `ot_apibcB`, `ot_atlaspB`, `ot_gintB` have **unconfirmed
+best-guess product names** pending owner verification.
 
 ### Where the schema lives and how it's created
 
@@ -534,7 +573,29 @@ load, but **should be revisited if multiple Pi devices are added** and
 each POSTs events frequently, plus multiple dashboard browser sessions
 querying simultaneously (see `docs/multi-device-scaling.md`).
 
+### Connecting with an external GUI client (DBeaver, etc.)
+
+Postgres only listens on `localhost` (`listen_addresses = 'localhost'`)
+and is never exposed on the server's public interface, regardless of what
+`pg_hba.conf` allows — this is intentional, so the DB can never be reached
+directly from the internet even with valid credentials.
+
+To connect with DBeaver, use an **SSH tunnel**, not a direct connection:
+1. **Main tab**: Host = `localhost` (not the public IP — this is the
+   address as seen from the server once the tunnel is up), Port `5432`,
+   Database `birmas`, Username `birmas_user`, Password from
+   `/root/birmas/.env` on the server.
+2. **SSH tab**: enable "Use SSH Tunnel", Host/IP `170.64.149.147`, Port
+   `22`, your normal SSH credentials.
+
+**Common mistake**: setting Main-tab Host to the public IP while also
+enabling the SSH tunnel — the tunnel makes the SSH server connect to that
+host/port *on its own behalf*, so pointing it at its own public IP (which
+Postgres doesn't listen on) fails immediately, often surfacing as an
+`EOFException` in the JDBC driver. Use `localhost` in the Main tab.
+
 ### Data growth & retention
+
 
 - No automatic pruning/retention policy currently exists — `events` grows
   unbounded. At ~3,225 rows / 8.8 MB total DB, this isn't urgent, but
@@ -802,6 +863,39 @@ flowchart TB
   stay device-local (not committed) — track those manually per device in
   this document or a small device inventory table (see below).
 
+### Proposal under consideration: chiller camera + cashier camera (2026-07-20)
+
+The owner is considering moving the current camera closer to the
+chiller/fridge (to improve detection confidence/recall) and adding a
+**second** camera dedicated to the cashier/register area.
+
+**Recommendation: yes — and use the second camera to make "sold" actually
+mean sold.** Today `event_type="sold"` is a pure disappearance timeout
+(`LOG_TTL`, 20s) with no idea whether a product was purchased — just that
+the chiller camera hasn't seen it in a while, which is inherently fuzzy in
+a dine-in setting. A cashier-facing camera could detect a product at the
+register and post `sold` deterministically, the same way `FRIDGE_ZONE`
+already deterministically decides `added` vs `restock`.
+
+This needs (not yet implemented):
+1. `camera_id` must stop being hardcoded in `inference/main.py` (see
+   "Things that will NOT scale as-is" below) so each camera posts its own
+   distinct `camera_id`.
+2. Two inference processes/zones: chiller keeps today's `FRIDGE_ZONE` +
+   `LOG_TTL` logic (with `LOG_TTL` still acting as a fallback for items
+   that leave the chiller's view without passing the register); cashier
+   runs a simpler "product class X seen in `CASHIER_ZONE`" → `sold`
+   directly, no dwell/tracker logic needed.
+3. A cashier `sold` event should close out any still-open chiller track
+   for the same product immediately, instead of waiting for `LOG_TTL`.
+   Simplest starting point: match by `class_name` within a short time
+   window (e.g. 2 minutes) — not perfectly precise with multiple units of
+   the same product in play, but a solid starting heuristic.
+4. Check Pi CPU/thermal headroom before assuming one Pi can run two YOLO
+   inference loops concurrently — a second Pi may be safer.
+5. Each camera needs its own MediaMTX path and its own entry in the
+   frontend's `cameras` array (see step 7 above).
+
 ### Device inventory (fill in as devices are added)
 
 | Device | Store/Location | Camera IP | Pi WireGuard IP | `camera_id` | Notes |
@@ -907,6 +1001,17 @@ After any frontend change destined for production: **always run
 `npm run build`** and confirm nginx is serving the new `dist/` (nginx just
 serves static files, no restart needed unless the nginx config itself
 changed).
+
+#### Server — nginx config
+- Global config `/etc/nginx/nginx.conf`, tracked at `deploy/nginx.conf`
+  (added 2026-07-20). Site config `deploy/nginx-birmas.conf` →
+  `/etc/nginx/sites-enabled/birmas`.
+- **`gzip_types` must include `application/json`** — `gzip on;` alone only
+  compresses `text/html` by nginx's default. Found 2026-07-20 as the main
+  cause of slow dashboard loads: dashboard components each fetch up to
+  5000 raw events on mount, and a 5000-row `/api/events` response is
+  ~1.1MB uncompressed vs ~120KB gzip'd.
+- After editing: `sudo nginx -t` then `sudo systemctl reload nginx`.
 
 #### Raspberry Pi — inference
 ```bash
@@ -1041,4 +1146,199 @@ SD card rewrite), the fix sequence has historically been:
   is sufficient; no service file edits needed for a model-only update.
 
 ---
+
+
+## Moving to a Subdomain
+
+Today the dashboard is reached by public IP only:
+`https://170.64.149.147/dashboard`, with a **self-signed** TLS cert
+(`/etc/nginx/ssl/birmas.crt`) and a CORS allowlist in
+`backend/app.py` hardcoded to that IP. Moving to a subdomain (e.g.
+`cctv.yourdomain.com`) is mostly a DNS + nginx + certbot change — no
+frontend/backend code restructuring needed, since the SPA already talks
+to the backend via relative `/api`, `/ws`, `/stream` paths (see
+`frontend/src/api.js`, `LivePlayer.vue`) rather than a hardcoded host.
+
+Replace `cctv.yourdomain.com` below with your actual subdomain.
+
+### Step 1 — Point DNS at the server
+
+You need to control DNS for the domain you want the subdomain under
+(registrar's DNS panel, or Cloudflare/Route53/etc. if you use one).
+
+1. Log in to wherever that domain's DNS is managed.
+2. Add an **A record**:
+   - Name/Host: `cctv` (so the full name resolves to `cctv.yourdomain.com`)
+   - Type: `A`
+   - Value: `170.64.149.147` (the droplet's public IP)
+   - TTL: default/low (e.g. 300s) while testing, can raise later
+3. Wait for propagation (usually minutes, can take up to ~1 hour). Verify:
+   ```bash
+   dig +short cctv.yourdomain.com
+   # should print 170.64.149.147
+   ```
+   If it prints nothing or a different IP, DNS hasn't propagated yet —
+   wait and retry before continuing.
+
+> If the server is also fronted by Cloudflare (orange-cloud proxy), turn
+> the proxy **off** (grey cloud, "DNS only") for this record until after
+> certbot successfully issues a certificate — certbot's HTTP-01 challenge
+> needs to reach the origin server directly the first time.
+
+### Step 2 — Get a real TLS certificate for the subdomain
+
+The server already has `certbot` installed (used for the other sites on
+this box, `journey.bsh.co.id` / `link.kanto.id`). The self-signed cert
+currently used for the IP-only site (`/etc/nginx/ssl/birmas.crt`) won't
+validate for a real hostname and will show browser warnings — get a free
+Let's Encrypt cert instead:
+
+```bash
+sudo certbot --nginx -d cctv.yourdomain.com
+```
+This requires an nginx `server {}` block whose `server_name` already
+matches `cctv.yourdomain.com` and is reachable on port 80 (see Step 3 —
+do Step 3 first, then run certbot, since certbot edits the block it
+finds by `server_name` and auto-adds the 443/ssl_certificate lines).
+Certbot will also offer to set up auto-renewal (a systemd timer,
+`certbot.timer`, already installed) and can optionally redirect HTTP→HTTPS
+for you automatically when asked.
+
+### Step 3 — Add an nginx server block for the subdomain
+
+Create a new server block (or adapt the existing `deploy/nginx-birmas.conf`)
+so `server_name` matches the subdomain instead of the bare IP:
+
+```nginx
+# /etc/nginx/sites-available/birmas-subdomain
+server {
+    listen 80;
+    server_name cctv.yourdomain.com;
+
+    root  /root/birmas/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/users/login {
+        limit_req zone=login burst=3 nodelay;
+        proxy_pass         http://127.0.0.1:8000/api/users/login;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        limit_req zone=api burst=30 nodelay;
+        proxy_pass         http://127.0.0.1:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    location /ws {
+        proxy_pass         http://127.0.0.1:8000/ws;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection "upgrade";
+        proxy_set_header   Host $host;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location /stream/ {
+        proxy_pass         http://127.0.0.1:8888/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/birmas-subdomain /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+Then run the `certbot --nginx -d cctv.yourdomain.com` command from Step 2
+— it will find this block by `server_name`, obtain the cert, and rewrite
+this file in place to add the `listen 443 ssl;` + `ssl_certificate` lines
+and an HTTP→HTTPS redirect block.
+
+**Decide whether to keep the old IP-based site running side by side.**
+You can leave the existing `170.64.149.147` HTTPS block in
+`/etc/nginx/sites-enabled/birmas` active (both can coexist — nginx routes
+by `server_name`/SNI), or remove it once the subdomain is confirmed
+working, so only one canonical URL remains. If you keep both, make sure
+`server_name` values don't overlap/conflict between the two files.
+
+### Step 4 — Update backend CORS allowlist
+
+`backend/app.py` currently only allows the bare IP as an origin:
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://170.64.149.147",
+        "http://170.64.149.147:5173",
+        "https://170.64.149.147",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    ...
+)
+```
+Add the new subdomain (and drop the IP-based entries later if you retire
+that URL):
+```python
+    allow_origins=[
+        "https://cctv.yourdomain.com",
+        "http://170.64.149.147",       # remove once migration is confirmed
+        "http://170.64.149.147:5173",
+        "https://170.64.149.147",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+```
+Restart the backend after editing: `sudo systemctl restart backend` (or
+whatever the backend's actual service name is — check
+`systemctl list-units | grep birmas` / the developer guide's services
+table).
+
+### Step 5 — Verify end-to-end
+
+```bash
+curl -I https://cctv.yourdomain.com/dashboard        # expect 200, valid cert (no -k needed)
+curl -I https://cctv.yourdomain.com/stream/cam1/main_stream.m3u8
+curl -I https://cctv.yourdomain.com/api/products
+```
+Open the dashboard in a browser at the new URL and confirm: no cert
+warning, live feed plays, login works, WebSocket toast notifications
+still arrive (browser console should show `wss://cctv.yourdomain.com/ws/events`
+connecting, not the old IP).
+
+### Step 6 — Git sync
+
+This migration only touches server-side files (nginx config, `.env`/CORS
+in `backend/app.py`). As always: commit the `backend/app.py` CORS change
+and the new nginx site config (add it under `deploy/`, mirroring
+`deploy/nginx-birmas.conf`) to the repo, push, then `git pull` on the Pi
+so its copy matches — even though the Pi doesn't run nginx/backend itself,
+keeping the whole repo in sync avoids confusion later.
+
+### Notes / things that do NOT need to change
+
+- **No frontend code changes** — `frontend/src/api.js` uses a relative
+  `baseURL: '/api'`, and `LivePlayer.vue` uses relative `/stream/...` —
+  both already domain-agnostic.
+- **WireGuard tunnel (Pi ↔ server) is unaffected** — it's a private
+  `10.0.0.0/24` overlay, entirely separate from the public-facing
+  domain/TLS setup.
+- **MediaMTX itself doesn't need a hostname** — nginx is the only thing
+  that proxies `/stream/` to it, and that's already relative.
 

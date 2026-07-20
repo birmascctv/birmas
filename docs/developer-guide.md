@@ -75,6 +75,23 @@ After any frontend change destined for production: **always run
 serves static files, no restart needed unless the nginx config itself
 changed).
 
+### Server — nginx config
+- Global config: `/etc/nginx/nginx.conf`, tracked in the repo at
+  `deploy/nginx.conf` (added 2026-07-20 — previously untracked). Site
+  config: `deploy/nginx-birmas.conf` → `/etc/nginx/sites-enabled/birmas`.
+- **`gzip_types` must include `application/json`.** `gzip on;` alone only
+  compresses `text/html` by nginx's built-in default — it does **not**
+  compress JSON. This was found 2026-07-20 to be a real cause of slow
+  dashboard loads: the dashboard's components (`StatsBar`, `CountChart`,
+  `EventTable`, `TimelineScrubber`) each independently fetch up to 5000
+  raw events on mount, and an uncompressed 5000-row `/api/events` response
+  is ~1.1MB vs ~120KB gzip'd. If you ever regenerate `nginx.conf` from a
+  fresh install/template, re-apply the uncommented `gzip_types` line (see
+  `deploy/nginx.conf`) — don't leave it on the commented-out Debian
+  default.
+- After any nginx config edit: `sudo nginx -t` (validate) then
+  `sudo systemctl reload nginx` (no dropped connections, unlike `restart`).
+
 ### Raspberry Pi — inference
 ```bash
 cd ~/birmas

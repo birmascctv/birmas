@@ -143,7 +143,65 @@ flowchart TB
   stay device-local (not committed) — track those manually per device in
   this document or a small device inventory table (see below).
 
-## Device inventory (fill in as devices are added)
+## Proposal under consideration: chiller camera + cashier camera (2026-07-20)
+
+The owner is considering: (1) moving the current camera physically closer
+to the chiller/fridge to improve detection confidence/recall (small,
+distant bounding boxes are a real limiting factor on `01ot_v4`'s
+precision/recall — see training review notes), and (2) adding a **second**
+camera dedicated to the cashier/register area.
+
+**Recommendation: yes, do both — and use the second camera to fix the
+"sold" logic properly.** Today's `event_type="sold"` (see
+`architecture.md`) is a pure disappearance timeout (`LOG_TTL`, 20s) — it
+does not know whether a product was actually purchased, just that the
+chiller camera hasn't seen it in a while. In a dine-in setting this is
+inherently fuzzy (products leave/re-enter frame for all kinds of reasons).
+A cashier-facing camera can instead detect the product being scanned/
+placed at the register and post `sold` **directly and deterministically**,
+the same way `FRIDGE_ZONE` already deterministically decides `added` vs
+`restock` today.
+
+### What this requires (not yet implemented)
+1. **`camera_id` must stop being hardcoded** in `inference/main.py` (see
+   "Things that will NOT scale as-is" below) — each camera's process needs
+   to post its own distinct `camera_id` (e.g. `cam1_chiller`, `cam2_cashier`).
+2. **Two inference processes**, one per camera/zone:
+   - Chiller camera keeps today's logic: `FRIDGE_ZONE` decides
+     added/restock; `LOG_TTL` disappearance still decides `sold` as a
+     fallback for products that leave the chiller's own view without ever
+     reaching the cashier's camera (e.g. a customer changes their mind and
+     puts it back, or walks out of frame not through the register).
+   - Cashier camera runs a **new, simpler event type** — e.g. `sold`
+     posted the moment the same product class is detected inside a
+     `CASHIER_ZONE` — no tracker/dwell logic needed there, just "product X
+     seen at the register." This event should take priority: if a cashier
+     event arrives for a track that's still open on the chiller side, the
+     backend (or a small reconciliation step) should close that chiller
+     track as `sold` immediately instead of waiting for `LOG_TTL` to expire.
+3. Whether the two cameras run on **one Pi with two `cv2.VideoCapture`
+   threads** or **two separate Pi devices** depends on CPU headroom — check
+   current Pi CPU/thermal margin under a single stream before assuming it
+   can run two YOLO inference loops concurrently; a second Pi is safer if
+   in doubt.
+4. Each camera needs its own MediaMTX path (`cam1_raw`/`cam1`,
+   `cam2_raw`/`cam2`) and its own entry in the frontend's `cameras` array
+   (see step 7 above) so the dashboard can show both live feeds side by
+   side or via a camera switcher.
+5. Matching a chiller-side track to a cashier-side detection reliably
+   (so you don't double-count) needs some thought — simplest starting
+   point is matching by `class_name` within a short time window (e.g. a
+   cashier detection of `ot_amerB` within 2 minutes of a chiller `added`
+   event for the same class marks that chiller track `sold`), accepting
+   that it won't be perfectly precise if multiple units of the same
+   product are in play at once.
+
+This is a real code change (new `CASHIER_ZONE`/second-camera config,
+tracker/event reconciliation logic) — not yet implemented as of this
+writing. Flagging the design here so it's ready to pick up once the
+camera hardware move happens.
+
+
 
 | Device | Store/Location | Camera IP | Pi WireGuard IP | `camera_id` | Notes |
 |---|---|---|---|---|---|
