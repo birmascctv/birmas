@@ -110,15 +110,22 @@ ENABLE_PEOPLE_DETECTION = os.getenv("ENABLE_PEOPLE_DETECTION", "false").lower() 
 PERSON_MODEL_PATH       = os.getenv("PERSON_MODEL_PATH", "models/yolov8n.pt")
 PEOPLE_API_ENDPOINT     = os.getenv("PEOPLE_API_ENDPOINT", API_ENDPOINT.replace("/events", "/people-events"))
 
-# DOOR_ZONE: measured on the actual 1280x720 frame (2026-08-03) — the glass
-# entrance door with the visible handle/lock fixture, top-right of frame.
-# A person track that FIRST appears here = walked in ("in"). A person track
-# that DISAPPEARS while last seen here = walked out ("out").
-DOOR_ZONE = _parse_zone(os.getenv("DOOR_ZONE", "950,0,1200,300"))
+# DOOR_ZONE: re-calibrated 2026-08-04 against training_results/frame/sudirman.jpg
+# with a pixel grid overlay. The PREVIOUS box (950,0,1200,300) was actually
+# sitting on the product storage/box shelf behind the door, not the door
+# itself — it fully overlapped FRIDGE_ZONE, so a customer merely browsing/
+# lingering at the chiller could trigger spurious door in/out events, and
+# short PERSON_LOG_TTL track drops there biased "out" far above "in". The
+# corrected box (745,0,945,330) sits directly on the visible glass door
+# frame/panels, to the LEFT of the storage shelf, confirmed against the
+# frame by the user. A person track that FIRST appears here = walked in
+# ("in"). A person track that DISAPPEARS while last seen here = walked out
+# ("out").
+DOOR_ZONE = _parse_zone(os.getenv("DOOR_ZONE", "745,0,945,330"))
 
 PERSON_INTERVAL        = float(os.getenv("PERSON_INTERVAL", "1.0"))   # run person model at most this often (seconds) — separate, slower cadence than product inference to limit CPU load on the Pi
 PERSON_CONFIRM_SECONDS = float(os.getenv("PERSON_CONFIRM_SECONDS", "0.5"))
-PERSON_LOG_TTL         = float(os.getenv("PERSON_LOG_TTL", "3.0"))    # people move faster than products — a much shorter disappearance timeout than LOG_TTL
+PERSON_LOG_TTL         = float(os.getenv("PERSON_LOG_TTL", "5.0"))    # people move faster than products — a shorter disappearance timeout than LOG_TTL, but bumped from 3.0 to 5.0 (2026-08-04) to reduce spurious track fragmentation from brief occlusion near the door
 ACTIVITY_BUCKET_SECONDS = float(os.getenv("ACTIVITY_BUCKET_SECONDS", "300"))  # throttle "activity" heartbeat to once per 5 min
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")

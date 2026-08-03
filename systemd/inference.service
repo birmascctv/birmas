@@ -21,10 +21,10 @@ Environment="RESTOCK_COOLDOWN=120"
 Environment="ENABLE_PEOPLE_DETECTION=false"
 Environment="PERSON_MODEL_PATH=./models/yolov8n.pt"
 Environment="PEOPLE_API_ENDPOINT=http://10.0.0.1:8000/api/people-events"
-Environment="DOOR_ZONE=950,0,1200,300"
+Environment="DOOR_ZONE=745,0,945,330"
 Environment="PERSON_INTERVAL=1.0"
 Environment="PERSON_CONFIRM_SECONDS=0.5"
-Environment="PERSON_LOG_TTL=3.0"
+Environment="PERSON_LOG_TTL=5.0"
 Environment="ACTIVITY_BUCKET_SECONDS=300"
 Restart=always
 RestartSec=5
