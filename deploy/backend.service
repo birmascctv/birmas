@@ -7,7 +7,17 @@ Type=simple
 User=root
 WorkingDirectory=/root/birmas
 EnvironmentFile=/root/birmas/.env
-ExecStart=/root/birmas/venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8000
+# Bound to 0.0.0.0 (not 127.0.0.1) because inference.py on the Pi posts
+# events directly to this port over the WireGuard tunnel (10.0.0.1:8000) —
+# same pattern as mediamtx's RTSP ingest port 8554, which is also 0.0.0.0
+# for the same reason. This was accidentally locked to 127.0.0.1 by the
+# 2026-03-24 hardening commit (bb6b9e43), which silently broke the Pi's
+# ability to post events/people-events from that day forward; it went
+# unnoticed because inference kept running/logging locally and only the
+# HTTP POSTs failed. A firewall rule (see deploy/README or server iptables)
+# additionally blocks port 8000 on the public eth0 interface, so it is only
+# reachable via the private WireGuard tunnel or localhost, not the internet.
+ExecStart=/root/birmas/venv/bin/uvicorn backend.app:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
 

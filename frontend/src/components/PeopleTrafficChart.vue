@@ -106,19 +106,23 @@ async function loadChart() {
         labels: hours,
         datasets: [
           { label: 'In',  data: in_counts,  backgroundColor: '#2563eb', borderWidth: 1 },
-          { label: 'Out', data: out_counts.map(v => -v), backgroundColor: '#dc2626', borderWidth: 1 },
+          { label: 'Out', data: out_counts, backgroundColor: '#dc2626', borderWidth: 1 },
         ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { labels: { color: tc } },
-          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${Math.abs(c.raw)}` } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw}` } },
         },
         scales: {
           x: { stacked: false, ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
           y: {
-            ticks: { color: tc, stepSize: 1, precision: 0, callback: v => Math.abs(v) },
+            // Fixed 0-100 range (per user preference) — keeps the scale
+            // consistent day to day rather than rescaling to the busiest
+            // hour, at the cost of bars looking small on quiet days.
+            min: 0, max: 100,
+            ticks: { color: tc, stepSize: 10, precision: 0 },
             grid: { color: gc },
             title: { display: true, text: 'People count', color: tc, font: { size: 11 } },
           },
