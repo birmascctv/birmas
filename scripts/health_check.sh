@@ -149,11 +149,19 @@ check() {
 ALL_OK=true
 
 # ── Service checks ────────────────────────────────────────────────────────────
-if ! systemctl is-active --quiet backend; then
+# NOTE: `systemctl is-active` is NOT enough here — a deadlocked/hung uvicorn
+# process still shows "active (running)" to systemd forever (this is exactly
+# what happened on 2026-07-31: the process froze for ~21h, never crashed, so
+# is-active kept returning true and this check never fired). We now also
+# curl the real /api/health endpoint; either a dead process OR a hung one
+# that stopped answering requests triggers a hard restart.
+if ! systemctl is-active --quiet backend || \
+   ! curl -s -o /dev/null --max-time 5 http://127.0.0.1:8000/api/health; then
     ALL_OK=false
     systemctl restart backend 2>/dev/null
-    check "backend" "Backend service is DOWN (auto-restart attempted)" "Backend is back online" \
-        systemctl is-active --quiet backend
+    sleep 3
+    check "backend" "Backend was DOWN or unresponsive (auto-restart attempted)" "Backend is back online" \
+        curl -s -o /dev/null --max-time 5 http://127.0.0.1:8000/api/health
 else
     _mark_ok "backend"
 fi
@@ -164,8 +172,28 @@ check "nginx"     "nginx not responding — dashboard unreachable" "nginx is bac
 check "mediamtx"  "MediaMTX not responding — live stream may be down" "MediaMTX is back online" \
     curl -s -o /dev/null --max-time 5 http://localhost:9997/v3/paths/list || ALL_OK=false
 
-check "hls"       "HLS stream cam1 unavailable — live feed is broken" "HLS stream cam1 is back" \
-    curl -s -o /dev/null --max-time 5 http://localhost:8888/cam1/index.m3u8 || ALL_OK=false
+# HLS/live-feed check: if the playlist is unreachable OR MediaMTX reports the
+# source path as not "ready", the Pi's ffmpeg-publisher is almost certainly
+# hung (it can silently zombie — process alive, socket stale — without ever
+# crashing/triggering its own systemd Restart=always, as seen on 2026-07-24
+# where it hung for 10 days straight). Auto-remediate by restarting it
+# remotely over the existing passwordless SSH/WireGuard link to the Pi.
+CAM1_READY=$(curl -s --max-time 5 http://localhost:9997/v3/paths/get/cam1_raw | python3 -c "import sys,json; print(json.load(sys.stdin).get('ready', False))" 2>/dev/null)
+if ! curl -s -o /dev/null --max-time 5 http://localhost:8888/cam1/index.m3u8 || [ "$CAM1_READY" != "True" ]; then
+    ALL_OK=false
+    if ! _was_failing "hls"; then
+        _mark_failing "hls"
+        send_alert "hls" "HLS stream cam1 unavailable/not ready — restarting ffmpeg-publisher on the Pi"
+    else
+        send_alert "hls" "HLS stream cam1 still unavailable/not ready — restarting ffmpeg-publisher on the Pi"
+    fi
+    ssh -o BatchMode=yes -o ConnectTimeout=5 birmas1@10.0.0.2 "sudo systemctl restart ffmpeg-publisher" >/dev/null 2>&1
+else
+    if _was_failing "hls"; then
+        _mark_ok "hls"
+        send_recovery "hls" "HLS stream cam1 is back and ready"
+    fi
+fi
 
 check "postgres"  "PostgreSQL not responding — events cannot be saved" "PostgreSQL is back online" \
     bash -c "PGPASSWORD=B1rm4sC4m3r4 psql -U birmas_user -h localhost -d birmas -c 'SELECT 1'" || ALL_OK=false

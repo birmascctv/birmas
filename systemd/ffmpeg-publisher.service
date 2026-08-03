@@ -5,9 +5,16 @@ Wants=wg-quick@wg0.service
 
 [Service]
 EnvironmentFile=/home/birmas1/birmas/.env
-ExecStart=/bin/sh -c '/usr/bin/ffmpeg -rtsp_transport tcp -i "$STREAM_URL" -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw'
+# -rw_timeout / -timeout: abort and exit if no data is read/written for 15s.
+# Without this, a stalled RTSP connection (camera hiccup, brief network
+# drop, etc.) leaves ffmpeg's process alive but frozen forever — systemd
+# sees it as "active (running)" and never restarts it (this hung for 10
+# days straight on 2026-07-24, silently killing the live feed). These
+# timeouts guarantee ffmpeg actually exits on a stall, so Restart=always
+# below can do its job.
+ExecStart=/bin/sh -c '/usr/bin/ffmpeg -nostdin -rtsp_transport tcp -timeout 15000000 -i "$STREAM_URL" -c:v copy -c:a aac -b:a 48k -rtsp_transport tcp -f rtsp rtsp://10.0.0.1:8554/cam1_raw'
 Restart=always
-RestartSec=10
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

@@ -4,6 +4,8 @@ from backend.routes.events import router as event_router
 from backend.routes.users import router as user_router
 from backend.routes.stats import router as stats_router
 from backend.routes.people import router as people_router
+from backend.db import engine
+from sqlalchemy import text
 import json, logging, os
 from logging.handlers import RotatingFileHandler
 
@@ -65,6 +67,24 @@ app.include_router(event_router, prefix="/api")
 app.include_router(user_router, prefix="/api/users")
 app.include_router(stats_router, prefix="/api")
 app.include_router(people_router, prefix="/api")
+
+
+@app.get("/api/health")
+def health_check():
+    """
+    Lightweight liveness probe. Confirms the ASGI app is actually serving
+    requests AND that the DB connection works — used by health_check.sh
+    (cron, every 5 min) to detect a hung/zombie backend process, which
+    `systemctl is-active` cannot see (a deadlocked process still shows as
+    "active" to systemd even though it no longer answers any requests).
+    """
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception as e:
+        db_ok = False
+    return {"status": "ok" if db_ok else "degraded", "db": db_ok}
 
 @app.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket):

@@ -74,6 +74,7 @@ async def get_people_events(
 
 @router.get("/people-events/hourly")
 async def get_hourly_traffic(
+    camera_id:  str | None = None,
     start_date: str | None = None,
     end_date:   str | None = None,
     db: Session = Depends(get_db),
@@ -88,6 +89,8 @@ async def get_hourly_traffic(
         func.sum(case((PeopleEvent.event_type == "out", 1), else_=0)).label("out_count"),
     ).filter(PeopleEvent.event_type.in_(["in", "out"]))
 
+    if camera_id:
+        q = q.filter(PeopleEvent.camera_id == camera_id)
     if start_date:
         q = q.filter(PeopleEvent.ts >= start_date)
     if end_date:

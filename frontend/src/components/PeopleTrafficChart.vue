@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
     <div class="flex items-center gap-2 mb-2 flex-wrap">
-      <h2 class="text-base sm:text-lg font-semibold text-red-600">Foot Traffic — Hourly In/Out</h2>
+      <h2 class="text-base sm:text-lg font-semibold text-red-600">Customer Traffic</h2>
       <span class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full"
             :class="storeActive ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                                  : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'">
@@ -32,6 +32,7 @@ import API from '../api'
 
 const props = defineProps({
   filter:     { type: String, default: 'day' },
+  camera:     { type: String, default: 'all' },
   customFrom: { type: String, default: null },
   customTo:   { type: String, default: null },
   darkMode:   { type: Boolean, default: false },
@@ -80,6 +81,7 @@ async function loadChart() {
   try {
     const params = { start_date: getStartDate(props.filter) }
     if (props.filter === 'custom' && props.customTo) params.end_date = props.customTo
+    if (props.camera && props.camera !== 'all') params.camera_id = props.camera
     const res = await API.get('/people-events/hourly', { params })
     if (gen !== loadGen) return
     const { hours, in_counts, out_counts } = res.data
@@ -116,7 +118,7 @@ async function loadChart() {
         scales: {
           x: { stacked: false, ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
           y: {
-            ticks: { color: tc, callback: v => Math.abs(v) },
+            ticks: { color: tc, stepSize: 1, precision: 0, callback: v => Math.abs(v) },
             grid: { color: gc },
             title: { display: true, text: 'People count', color: tc, font: { size: 11 } },
           },

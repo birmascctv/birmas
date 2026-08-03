@@ -109,16 +109,6 @@
       />
     </div>
 
-    <!-- People / Occupancy Traffic -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3">
-      <PeopleTrafficChart
-        :filter="activeFilter"
-        :customFrom="activeFilter === 'custom' ? customFromISO : null"
-        :customTo="activeFilter === 'custom' ? customToISO : null"
-        :darkMode="dark"
-      />
-    </div>
-
     <!-- Filter Row (for table & chart) -->
     <div class="flex items-center gap-2 flex-wrap mb-3">
       <select v-model="activeFilter"
@@ -197,6 +187,17 @@
         />
       </div>
     </section>
+
+    <!-- Customer Traffic (people / occupancy) -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mt-3 mb-3">
+      <PeopleTrafficChart
+        :filter="activeFilter"
+        :camera="showAllCams ? 'all' : selectedCam"
+        :customFrom="activeFilter === 'custom' ? customFromISO : null"
+        :customTo="activeFilter === 'custom' ? customToISO : null"
+        :darkMode="dark"
+      />
+    </div>
 
     <ToastNotif :toasts="toasts" />
   </div>
