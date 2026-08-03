@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.routes.events import router as event_router
 from backend.routes.users import router as user_router
 from backend.routes.stats import router as stats_router
+from backend.routes.people import router as people_router
 import json, logging, os
 from logging.handlers import RotatingFileHandler
 
@@ -48,6 +49,7 @@ app.state.manager = manager
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://iot.birmas.id",
         "http://170.64.149.147",
         "http://170.64.149.147:5173",
         "https://170.64.149.147",
@@ -62,6 +64,7 @@ app.add_middleware(
 app.include_router(event_router, prefix="/api")
 app.include_router(user_router, prefix="/api/users")
 app.include_router(stats_router, prefix="/api")
+app.include_router(people_router, prefix="/api")
 
 @app.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket):

@@ -82,17 +82,58 @@ def _in_zone(bbox, zone):
     cy = (bbox[1] + bbox[3]) / 2
     return zone[0] <= cx <= zone[2] and zone[1] <= cy <= zone[3]
 
-# Zone where products originate FROM the fridge (customer taking product).
+# Zone where products originate FROM the fridge/chiller (customer taking product).
 # Bounding box center inside this zone on first detection → event_type="added".
-# Outside this zone → event_type="restock" (product came from outside the fridge).
+# Outside this zone → event_type="restock" (product came from outside the fridge,
+# e.g. staff placing it on the counter/bar for restocking).
+# Coordinates measured from the actual 1280x720 camera frame (2026-08-03):
+# the chiller/door area occupies the right ~43% of the frame, the counter/bar
+# staging area (where staff restock) occupies the left ~55%. See
+# training_results/frame/sudirman_chiller.jpg and sudirman_bar.jpg for reference.
 # Set FRIDGE_ZONE="" to disable zone detection and fall back to same-class logic.
-FRIDGE_ZONE = _parse_zone(os.getenv("FRIDGE_ZONE", "560,0,780,230"))
+FRIDGE_ZONE = _parse_zone(os.getenv("FRIDGE_ZONE", "741,0,1280,348"))
+
+# RESTOCK_COOLDOWN: minimum seconds between two "restock" events of the same
+# class. During an actual restocking session, staff handle several bottles
+# of the same product on the counter in quick succession — each bottle is a
+# genuinely distinct track, but posting a separate timeline dot per bottle
+# is noise; one dot per stocking session is what matters to the business.
+RESTOCK_COOLDOWN = float(os.getenv("RESTOCK_COOLDOWN", "120"))
+
+# ---------------- PEOPLE / OCCUPANCY DETECTION (optional) ----------------
+# Detects people crossing the door (in/out) and posts a periodic "activity"
+# heartbeat, used by the dashboard to show hourly foot traffic and a
+# store-open/closed indicator. Disabled by default — requires a second,
+# generic COCO-pretrained model (yolov8n.pt has a "person" class; the
+# product model does not) to be present at PERSON_MODEL_PATH.
+ENABLE_PEOPLE_DETECTION = os.getenv("ENABLE_PEOPLE_DETECTION", "false").lower() == "true"
+PERSON_MODEL_PATH       = os.getenv("PERSON_MODEL_PATH", "models/yolov8n.pt")
+PEOPLE_API_ENDPOINT     = os.getenv("PEOPLE_API_ENDPOINT", API_ENDPOINT.replace("/events", "/people-events"))
+
+# DOOR_ZONE: measured on the actual 1280x720 frame (2026-08-03) — the glass
+# entrance door with the visible handle/lock fixture, top-right of frame.
+# A person track that FIRST appears here = walked in ("in"). A person track
+# that DISAPPEARS while last seen here = walked out ("out").
+DOOR_ZONE = _parse_zone(os.getenv("DOOR_ZONE", "950,0,1200,300"))
+
+PERSON_INTERVAL        = float(os.getenv("PERSON_INTERVAL", "1.0"))   # run person model at most this often (seconds) — separate, slower cadence than product inference to limit CPU load on the Pi
+PERSON_CONFIRM_SECONDS = float(os.getenv("PERSON_CONFIRM_SECONDS", "0.5"))
+PERSON_LOG_TTL         = float(os.getenv("PERSON_LOG_TTL", "3.0"))    # people move faster than products — a much shorter disappearance timeout than LOG_TTL
+ACTIVITY_BUCKET_SECONDS = float(os.getenv("ACTIVITY_BUCKET_SECONDS", "300"))  # throttle "activity" heartbeat to once per 5 min
 
 print(f"[DEBUG] STREAM_URL={STREAM_URL}")
 print(f"[DEBUG] API_ENDPOINT={API_ENDPOINT}")
 print(f"[DEBUG] MODEL_PATH={MODEL_PATH}")
 print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s  "
-      f"REID_WINDOW={REID_WINDOW}s  CONFIRM_SECONDS={CONFIRM_SECONDS}s  FRIDGE_ZONE={FRIDGE_ZONE}")
+      f"REID_WINDOW={REID_WINDOW}s  CONFIRM_SECONDS={CONFIRM_SECONDS}s  FRIDGE_ZONE={FRIDGE_ZONE}  "
+      f"RESTOCK_COOLDOWN={RESTOCK_COOLDOWN}s")
+print(f"[DEBUG] ENABLE_PEOPLE_DETECTION={ENABLE_PEOPLE_DETECTION}  PERSON_MODEL_PATH={PERSON_MODEL_PATH}  "
+      f"DOOR_ZONE={DOOR_ZONE}  PERSON_INTERVAL={PERSON_INTERVAL}s  PERSON_LOG_TTL={PERSON_LOG_TTL}s")
+
+# Tracks the last time a "restock" event was posted for each class_id, so
+# repeated handling of the same product during one stocking session doesn't
+# flood the timeline with duplicate dots.
+last_restock_ts = {}
 
 IMG_SIZE = 640
 # ----------------------------------------
@@ -135,11 +176,23 @@ model = YOLO(MODEL_PATH)
 model.model.eval()
 print("Model loaded:", model.names)
 
+# ---------------- LOAD PEOPLE MODEL (optional) ----------------
+person_model = None
+if ENABLE_PEOPLE_DETECTION:
+    if os.path.isfile(PERSON_MODEL_PATH):
+        person_model = YOLO(PERSON_MODEL_PATH)
+        person_model.model.eval()
+        print(f"[INFO] People-detection model loaded: {PERSON_MODEL_PATH}")
+    else:
+        print(f"[WARN] ENABLE_PEOPLE_DETECTION=true but {PERSON_MODEL_PATH} "
+              f"not found — people detection disabled until the model is deployed.")
+
 # ---------------- INIT TRACKER ----------------
 tracker     = ProductTracker(lost_ttl=REID_WINDOW)
 # seen_tracks[track_id] = {
 #   "label": str, "first_seen": float, "last_seen": float,
 #   "posted": bool,           -- has an added/restock event actually been sent?
+#   "event_type": str,        -- "added" | "restock" — set once posted, used to decide whether "sold" should fire
 #   "origin_bbox": str,       -- bbox at first detection, used for the zone check
 #   "bbox": str,              -- most recent bbox, used to annotate the "sold" frame
 #   "frame": np.ndarray,      -- most recent frame, used to annotate the "sold" frame
@@ -147,6 +200,12 @@ tracker     = ProductTracker(lost_ttl=REID_WINDOW)
 seen_tracks = {}
 frame_count = 0
 start_time  = time.time()
+
+# People/occupancy tracker + state (only used if person_model loaded)
+people_tracker      = ProductTracker(match_iou=0.2, lost_ttl=PERSON_LOG_TTL, reid_iou=0.1, reid_dist_frac=0.2)
+seen_people         = {}
+last_person_infer   = 0.0
+last_activity_post  = 0.0
 
 FRAMES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage", "frames")
 os.makedirs(FRAMES_DIR, exist_ok=True)
@@ -207,6 +266,19 @@ def post_event(event_type: str, label: str, bbox: str, confidence: float,
         requests.post(API_ENDPOINT, json=payload, timeout=5)
     except Exception as e:
         print(f"[ERROR] post {event_type} for {label}: {e}")
+
+def post_people_event(event_type: str, confidence: float = 0.0):
+    """event_type: 'in' | 'out' | 'activity'"""
+    payload = {
+        "camera_id":  "cam1",
+        "ts":         now_wib().isoformat(),
+        "event_type": event_type,
+        "confidence": confidence,
+    }
+    try:
+        requests.post(PEOPLE_API_ENDPOINT, json=payload, timeout=5)
+    except Exception as e:
+        print(f"[ERROR] post people-event {event_type}: {e}")
 
 # Wait for first frame before starting inference
 print("[INFO] Waiting for first frame from stream...")
@@ -284,25 +356,91 @@ while True:
                         v["label"] == label and v["posted"] for v in seen_tracks.values()
                     )
                     event_type = "added" if not same_class_active else "restock"
+
+                if event_type == "restock":
+                    # De-dupe: skip posting if this class was already logged as
+                    # restocked within RESTOCK_COOLDOWN seconds — staff handling
+                    # several bottles of the same product in one stocking pass
+                    # would otherwise spam the timeline with one dot per bottle.
+                    last_ts = last_restock_ts.get(class_id, 0)
+                    if now - last_ts < RESTOCK_COOLDOWN:
+                        tr["posted"]     = True
+                        tr["event_type"] = "restock"
+                        continue
+                    last_restock_ts[class_id] = now
+
                 post_event(event_type, label, tr["origin_bbox"], float(obj["confidence"]), frame_img=tr["frame"])
                 print(f"[{event_type.upper()}] {label} (track {tid})")
-                tr["posted"] = True
+                tr["posted"]     = True
+                tr["event_type"] = event_type
 
         # -------- PRODUCT SOLD --------
         for tid in list(seen_tracks.keys()):
             tr = seen_tracks[tid]
             if now - tr["last_seen"] > LOG_TTL:
-                # Only report "sold" for tracks that were actually confirmed/
-                # posted as added or restocked — an unconfirmed blip that
-                # disappears again is noise, not a real detection, so it's
-                # silently dropped instead of adding an orphan "sold" event.
-                if tr["posted"]:
+                # Only report "sold" for tracks that were actually confirmed
+                # AND classified as "added" (a customer taking the product
+                # from the chiller). Tracks classified as "restock" are staff
+                # placing stock on the counter/shelf — their disappearance
+                # from view just means the item was put away, not sold, so no
+                # "sold" event is posted for those (this was previously firing
+                # a false "sold" for every restocked item, doubling noise).
+                if tr["posted"] and tr.get("event_type") == "added":
                     post_event("sold", tr["label"], tr["bbox"], 0.0, frame_img=tr["frame"])
                     print(f"[SOLD] {tr['label']} (track {tid})")
                 del seen_tracks[tid]
 
     except Exception as e:
         print(f"[ERROR] {e}")
+
+    # -------- PEOPLE / OCCUPANCY (optional, separate cadence) --------
+    if person_model is not None and (time.time() - last_person_infer) >= PERSON_INTERVAL:
+        last_person_infer = time.time()
+        try:
+            now = time.time()
+            pres = person_model.predict(frame, imgsz=IMG_SIZE, conf=0.4, iou=0.45,
+                                         classes=[0], verbose=False)[0]  # class 0 = person (COCO)
+            pdetections = []
+            for b in pres.boxes:
+                x1, y1, x2, y2 = b.xyxy[0].tolist()
+                pdetections.append([x1, y1, x2, y2, float(b.conf), 0])
+
+            ptracked = people_tracker.update(pdetections, frame.shape)
+
+            if ptracked and (now - last_activity_post) >= ACTIVITY_BUCKET_SECONDS:
+                post_people_event("activity", confidence=max(o["confidence"] for o in ptracked))
+                last_activity_post = now
+
+            for obj in ptracked:
+                tid  = obj["track_id"]
+                bbox = obj["bbox"]
+                if tid not in seen_people:
+                    seen_people[tid] = {
+                        "first_seen":  now, "last_seen": now,
+                        "posted_in":   False, "origin_bbox": bbox, "bbox": bbox,
+                        "confidence":  obj["confidence"],
+                    }
+                else:
+                    seen_people[tid]["last_seen"]  = now
+                    seen_people[tid]["bbox"]       = bbox
+                    seen_people[tid]["confidence"] = obj["confidence"]
+
+                pt = seen_people[tid]
+                if not pt["posted_in"] and (now - pt["first_seen"]) >= PERSON_CONFIRM_SECONDS:
+                    if DOOR_ZONE is not None and _in_zone(pt["origin_bbox"], DOOR_ZONE):
+                        post_people_event("in", confidence=pt["confidence"])
+                        print(f"[PEOPLE IN] track {tid}")
+                    pt["posted_in"] = True
+
+            for tid in list(seen_people.keys()):
+                pt = seen_people[tid]
+                if now - pt["last_seen"] > PERSON_LOG_TTL:
+                    if DOOR_ZONE is not None and _in_zone(pt["bbox"], DOOR_ZONE):
+                        post_people_event("out", confidence=pt["confidence"])
+                        print(f"[PEOPLE OUT] track {tid}")
+                    del seen_people[tid]
+        except Exception as e:
+            print(f"[ERROR] people-detection: {e}")
 
     # Sleep only the remaining time to hit INFER_INTERVAL.
     # If YOLO took longer than INFER_INTERVAL (e.g. throttled Pi), no sleep — runs immediately.

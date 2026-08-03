@@ -109,6 +109,16 @@
       />
     </div>
 
+    <!-- People / Occupancy Traffic -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3">
+      <PeopleTrafficChart
+        :filter="activeFilter"
+        :customFrom="activeFilter === 'custom' ? customFromISO : null"
+        :customTo="activeFilter === 'custom' ? customToISO : null"
+        :darkMode="dark"
+      />
+    </div>
+
     <!-- Filter Row (for table & chart) -->
     <div class="flex items-center gap-2 flex-wrap mb-3">
       <select v-model="activeFilter"
@@ -202,6 +212,7 @@ import EventTable  from '../components/EventTable.vue'
 import StatsBar    from '../components/StatsBar.vue'
 import ToastNotif  from '../components/ToastNotif.vue'
 import TimelineScrubber from '../components/TimelineScrubber.vue'
+import PeopleTrafficChart from '../components/PeopleTrafficChart.vue'
 import API from '../api'
 
 const { dark, toggleDark } = useDarkMode()

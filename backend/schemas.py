@@ -43,3 +43,18 @@ class EventOut(EventBase):
     id: int
     class Config:
         from_attributes = True
+
+class PeopleEventCreate(BaseModel):
+    camera_id:  str
+    ts:         Optional[datetime] = None
+    event_type: str                       # "in" | "out" | "activity"
+    confidence: float = 0.0
+
+class PeopleEventOut(BaseModel):
+    id:         int
+    camera_id:  str
+    ts:         datetime
+    event_type: str
+    confidence: float
+    class Config:
+        from_attributes = True

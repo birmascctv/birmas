@@ -34,3 +34,21 @@ class Product(Base):
     class_name    = Column(String, nullable=False)
     product_brand = Column(String, nullable=False)
     product_name  = Column(String, nullable=False)
+
+class PeopleEvent(Base):
+    """
+    A person crossing the door (in/out) or a periodic activity heartbeat
+    used to infer whether the store currently has customers/staff activity.
+    event_type: "in" | "out" | "activity"
+      - "in"/"out": a person's track originated at / ended at the door zone.
+      - "activity": periodic heartbeat posted whenever >=1 person is visible
+        anywhere in frame, throttled to one per ACTIVITY_BUCKET_SECONDS, used
+        to build the hourly foot-traffic/occupancy chart and the
+        store-open/closed indicator.
+    """
+    __tablename__ = "people_events"
+    id         = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    ts         = Column(DateTime, default=now_wib, index=True)
+    camera_id  = Column(String, index=True)
+    event_type = Column(String, index=True)  # "in" | "out" | "activity"
+    confidence = Column(Float, default=0.0)

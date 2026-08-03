@@ -13,7 +13,19 @@ Environment="INFER_INTERVAL=0"
 Environment="LOG_TTL=20"
 Environment="REID_WINDOW=10"
 Environment="CONFIRM_SECONDS=1.5"
-Environment="FRIDGE_ZONE="
+Environment="FRIDGE_ZONE=741,0,1280,348"
+Environment="RESTOCK_COOLDOWN=120"
+# People/occupancy detection — leave disabled (false) until yolov8n.pt has
+# been deployed to this Pi (scp'd to ./models/yolov8n.pt) and verified.
+# Flip to "true" only after that file exists here, then `systemctl restart inference`.
+Environment="ENABLE_PEOPLE_DETECTION=false"
+Environment="PERSON_MODEL_PATH=./models/yolov8n.pt"
+Environment="PEOPLE_API_ENDPOINT=http://10.0.0.1:8000/api/people-events"
+Environment="DOOR_ZONE=950,0,1200,300"
+Environment="PERSON_INTERVAL=1.0"
+Environment="PERSON_CONFIRM_SECONDS=0.5"
+Environment="PERSON_LOG_TTL=3.0"
+Environment="ACTIVITY_BUCKET_SECONDS=300"
 Restart=always
 RestartSec=5
 StandardOutput=journal
