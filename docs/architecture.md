@@ -77,27 +77,54 @@ flowchart TB
        *confirmed* (seen continuously for `CONFIRM_SECONDS`, default 1.5s,
        to filter one-frame flicker). Zone-based: if the track's bbox on
        first detection falls inside `FRIDGE_ZONE`, it's `added` (customer
-       took it from the fridge); outside the zone, it's `restock`
-       (product placed from elsewhere). There is currently no
-       "cashier zone" — see the note below.
-     - **sold** — purely a disappearance timeout, **not** zone-based. Once
-       a track has been confirmed (added/restock was posted), if it isn't
-       seen again for `LOG_TTL` seconds (default 20s, tuned for a dine-in
-       area where drinks sit around) it's reported "sold". This means
-       "sold" today really means "this product hasn't been seen by the
-       camera in 20+ seconds," not "this product was seen at checkout."
-       Unconfirmed tracks that vanish before `CONFIRM_SECONDS` never post
-       any event at all.
-  5. POSTs each event as JSON (including a base64-encoded JPEG frame
-     capture) to the backend's `/api/events` endpoint over the WireGuard
-     tunnel.
+       took it from the chiller); outside the zone (e.g. the counter/bar
+       area where staff restock), it's `restock`.
+       `FRIDGE_ZONE` is measured from the actual 1280x720 camera frame
+       (fixed 2026-08-03 — it had regressed to an empty/disabled value,
+       silently falling back to a much cruder same-class heuristic; see
+       `training_results/frame/sudirman_chiller.jpg` /
+       `sudirman_bar.jpg` for the reference photos used to re-measure it).
+       A `restock` event for a given product class is only posted once
+       per `RESTOCK_COOLDOWN` seconds (default 120s) — staff handling
+       several bottles of the same product during one stocking pass would
+       otherwise post one dot per bottle instead of one dot per session.
+     - **sold** — a disappearance timeout, and (fixed 2026-08-03) **only
+       for tracks that were classified as `added`**. If a confirmed
+       `added` track isn't seen again for `LOG_TTL` seconds (default 20s,
+       tuned for a dine-in area where drinks sit around), it's reported
+       "sold" — meaning "this product hasn't been seen by the camera in
+       20+ seconds," not "this product was seen at checkout." Tracks
+       classified as `restock` never produce a "sold" event when they
+       disappear (staff putting a restocked item away isn't a sale — this
+       was previously firing a false "sold" for every restocked item,
+       doubling timeline noise). Unconfirmed tracks that vanish before
+       `CONFIRM_SECONDS` never post any event at all.
+  5. **Optional people/occupancy detection** (`ENABLE_PEOPLE_DETECTION`,
+     off by default): a second, generic COCO-pretrained model
+     (`inference/models/yolov8n.pt`, class 0 = "person") runs at a slower
+     cadence (`PERSON_INTERVAL`, default every 1s) on the same frame,
+     tracked with its own short-lived `ProductTracker` instance. A person
+     track that *first appears* inside `DOOR_ZONE` (the glass entrance
+     door, top-right of frame) posts an `"in"` event; a track that
+     *disappears* while last seen inside `DOOR_ZONE` posts an `"out"`
+     event. Independently, a throttled `"activity"` heartbeat (one per
+     `ACTIVITY_BUCKET_SECONDS`, default 5 min) is posted whenever anyone is
+     visible anywhere in frame — this powers the dashboard's
+     store-active/inactive indicator and the hourly foot-traffic chart.
+     These post to `/api/people-events` (separate from product `/api/events`).
+  6. POSTs each product event as JSON (including a base64-encoded JPEG
+     frame capture) to the backend's `/api/events` endpoint over the
+     WireGuard tunnel.
 
-  > **Planned improvement**: a true "sold at cashier" signal would need a
-  > cashier-facing zone/camera — see `docs/multi-device-scaling.md` for the
-  > two-camera (chiller + cashier) proposal being considered.
-  4. POSTs each event as JSON (including a base64-encoded JPEG frame
-     capture) to the backend's `/api/events` endpoint over the WireGuard
-     tunnel.
+  > **Hardware note**: the Pi is CPU-only and already the throughput
+  > bottleneck (~1 product-detection frame every ~12s observed in
+  > practice). Enabling people detection adds a second model pass and
+  > measurably slows the main loop further (~12s → ~14s per frame in
+  > testing) — acceptable for this business's event-logging use case, but
+  > worth knowing if product-detection responsiveness ever needs to be
+  > prioritized over foot-traffic tracking. Disable by setting
+  > `ENABLE_PEOPLE_DETECTION=false` and restarting `inference.service`.
+
   - Runs inside a Python venv at `~/birmas/venv` built with
     `--system-site-packages` so it can reuse apt-installed ARM-optimized
     wheels for opencv/torch/scipy/torchvision (pip-compiling these from

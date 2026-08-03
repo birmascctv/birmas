@@ -91,6 +91,34 @@ the newly added rows (`ot_apibcB`, `ot_atlaspB`) and one existing
 verification — check the `product` table for `"unconfirmed"` in
 `product_name`.
 
+### `people_events`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | serial PK | |
+| `ts` | timestamp | WIB local time |
+| `camera_id` | varchar | which camera saw it |
+| `event_type` | varchar | `in` \| `out` \| `activity` — see below |
+| `confidence` | float | detection confidence |
+
+Added 2026-08-03 for the people/occupancy-detection feature. Populated by
+`inference/main.py`'s optional person-detection pass (disabled by default,
+`ENABLE_PEOPLE_DETECTION=false`) via `POST /api/people-events`:
+- `in` / `out`: a person track that first appeared / last disappeared
+  inside the door zone (`DOOR_ZONE` env var, the glass entrance top-right
+  of frame) — used for the hourly foot-traffic chart
+  (`GET /api/people-events/hourly`).
+- `activity`: a throttled heartbeat (one per `ACTIVITY_BUCKET_SECONDS`,
+  default 5 min) posted whenever any person is visible anywhere in frame —
+  used by `GET /api/store-status` to show a store-active/inactive
+  indicator on the dashboard (active if a heartbeat was seen in the last
+  10 minutes).
+
+Created via `scripts/2026-08-03_add_people_events_table.sql`. Note: the
+table is owned by the `postgres` role when created this way — remember to
+`GRANT ALL ON people_events TO birmas_user;` (and on its sequence) after
+running any future migration as `postgres`, or the backend will fail with
+`permission denied for table people_events`.
+
 ## Where the schema lives and how it's created
 
 - **No migration tool (Alembic, etc.) is currently used.** Tables are
