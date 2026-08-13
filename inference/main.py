@@ -110,18 +110,25 @@ ENABLE_PEOPLE_DETECTION = os.getenv("ENABLE_PEOPLE_DETECTION", "false").lower() 
 PERSON_MODEL_PATH       = os.getenv("PERSON_MODEL_PATH", "models/yolov8n.pt")
 PEOPLE_API_ENDPOINT     = os.getenv("PEOPLE_API_ENDPOINT", API_ENDPOINT.replace("/events", "/people-events"))
 
-# DOOR_ZONE: re-calibrated 2026-08-04 against training_results/frame/sudirman.jpg
-# with a pixel grid overlay. The PREVIOUS box (950,0,1200,300) was actually
-# sitting on the product storage/box shelf behind the door, not the door
-# itself — it fully overlapped FRIDGE_ZONE, so a customer merely browsing/
-# lingering at the chiller could trigger spurious door in/out events, and
-# short PERSON_LOG_TTL track drops there biased "out" far above "in". The
-# corrected box (745,0,945,330) sits directly on the visible glass door
-# frame/panels, to the LEFT of the storage shelf, confirmed against the
-# frame by the user. A person track that FIRST appears here = walked in
-# ("in"). A person track that DISAPPEARS while last seen here = walked out
-# ("out").
-DOOR_ZONE = _parse_zone(os.getenv("DOOR_ZONE", "745,0,945,330"))
+# DOOR_ZONE / CHILLER_ZONE: re-calibrated 2026-08-13 using the user-provided
+# training_results/frame/sudirman_chillerndoor.jpg (red box = chiller glass,
+# green box = actual entrance/exit door), template-matched against the full
+# frame and scaled to the 1280x720 coordinate space used elsewhere.
+#
+# IMPORTANT CORRECTION: the box previously used for DOOR_ZONE (745,0,945,330,
+# set 2026-08-04) was actually the CHILLER's own glass door (a reach-in
+# cooler with reflective glass panels that looks very similar to a building
+# entrance) — NOT the store's real entrance. That mistake made things worse:
+# every customer standing at the chiller to browse products was being
+# counted as walking in/out, which is exactly why "out" kept exceeding "in".
+# The real entrance is the narrow doorway further right, near the boxes/
+# shelf (green box). DOOR_ZONE below is padded a bit beyond the exact green
+# box to tolerate perspective/parallax as a person's full-height bbox moves
+# through the doorway, while CHILLER_ZONE marks the glass-cooler area so a
+# person merely standing there can be explicitly excluded from in/out
+# counting, even on centroid edge cases.
+CHILLER_ZONE = _parse_zone(os.getenv("CHILLER_ZONE", "740,0,870,291"))
+DOOR_ZONE = _parse_zone(os.getenv("DOOR_ZONE", "1100,0,1280,400"))
 
 PERSON_INTERVAL        = float(os.getenv("PERSON_INTERVAL", "1.0"))   # run person model at most this often (seconds) — separate, slower cadence than product inference to limit CPU load on the Pi
 PERSON_CONFIRM_SECONDS = float(os.getenv("PERSON_CONFIRM_SECONDS", "0.5"))
@@ -135,7 +142,7 @@ print(f"[DEBUG] INFER_INTERVAL={INFER_INTERVAL}s  LOG_TTL={LOG_TTL}s  "
       f"REID_WINDOW={REID_WINDOW}s  CONFIRM_SECONDS={CONFIRM_SECONDS}s  FRIDGE_ZONE={FRIDGE_ZONE}  "
       f"RESTOCK_COOLDOWN={RESTOCK_COOLDOWN}s")
 print(f"[DEBUG] ENABLE_PEOPLE_DETECTION={ENABLE_PEOPLE_DETECTION}  PERSON_MODEL_PATH={PERSON_MODEL_PATH}  "
-      f"DOOR_ZONE={DOOR_ZONE}  PERSON_INTERVAL={PERSON_INTERVAL}s  PERSON_LOG_TTL={PERSON_LOG_TTL}s")
+      f"DOOR_ZONE={DOOR_ZONE}  CHILLER_ZONE={CHILLER_ZONE}  PERSON_INTERVAL={PERSON_INTERVAL}s  PERSON_LOG_TTL={PERSON_LOG_TTL}s")
 
 # Tracks the last time a "restock" event was posted for each class_id, so
 # repeated handling of the same product during one stocking session doesn't
@@ -434,7 +441,13 @@ while True:
 
                 pt = seen_people[tid]
                 if not pt["posted_in"] and (now - pt["first_seen"]) >= PERSON_CONFIRM_SECONDS:
-                    if DOOR_ZONE is not None and _in_zone(pt["origin_bbox"], DOOR_ZONE):
+                    # Only count as "in" if the origin position is in the real
+                    # doorway AND not simultaneously in the chiller zone — this
+                    # guards against any future DOOR_ZONE/CHILLER_ZONE overlap
+                    # silently reintroducing the "browsing counted as walking
+                    # in" bug fixed on 2026-08-13.
+                    if (DOOR_ZONE is not None and _in_zone(pt["origin_bbox"], DOOR_ZONE)
+                            and not (CHILLER_ZONE is not None and _in_zone(pt["origin_bbox"], CHILLER_ZONE))):
                         post_people_event("in", confidence=pt["confidence"])
                         print(f"[PEOPLE IN] track {tid}")
                     pt["posted_in"] = True
@@ -442,7 +455,8 @@ while True:
             for tid in list(seen_people.keys()):
                 pt = seen_people[tid]
                 if now - pt["last_seen"] > PERSON_LOG_TTL:
-                    if DOOR_ZONE is not None and _in_zone(pt["bbox"], DOOR_ZONE):
+                    if (DOOR_ZONE is not None and _in_zone(pt["bbox"], DOOR_ZONE)
+                            and not (CHILLER_ZONE is not None and _in_zone(pt["bbox"], CHILLER_ZONE))):
                         post_people_event("out", confidence=pt["confidence"])
                         print(f"[PEOPLE OUT] track {tid}")
                     del seen_people[tid]

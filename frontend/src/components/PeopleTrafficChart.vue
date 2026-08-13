@@ -59,6 +59,21 @@ function getStartDate(filter) {
   return now.toISOString()
 }
 
+// Picks a "nice" axis step/max for large scales — e.g. max=340 -> step=100,
+// max=3400, max=45 (small) falls back to the fixed 0-100/step-10 look.
+// Uses a classic 1/2/5-times-power-of-ten stepping so gridlines land on
+// round numbers no matter how big the counts get (hundreds, thousands...).
+function niceStep(maxValue) {
+  const rough = maxValue / 8  // aim for ~8 gridlines
+  const pow10 = Math.pow(10, Math.floor(Math.log10(rough || 1)))
+  const candidates = [1, 2, 5, 10]
+  let step = pow10 * 10
+  for (const c of candidates) {
+    if (rough <= c * pow10) { step = c * pow10; break }
+  }
+  return step
+}
+
 const lastActivityLabel = ref('Checking store activity…')
 function updateLastActivityLabel() {
   if (!lastActivityTs.value) { lastActivityLabel.value = 'No activity recorded yet'; return }
@@ -100,14 +115,35 @@ async function loadChart() {
     const tc  = textColor()
     const gc  = gridColor()
 
+    // Switch bar -> line once any hourly count exceeds 100 (fixed 0-100 bar
+    // scale no longer fits) — a line chart reads better than bars once the
+    // range stretches into the hundreds, and lets the y-axis grow as wide
+    // as the data needs instead of clipping/squashing at a fixed ceiling.
+    const maxCount = Math.max(0, ...in_counts, ...out_counts)
+    const useLine  = maxCount > 100
+
+    let yMax, yStep
+    if (useLine) {
+      yStep = niceStep(maxCount)
+      yMax  = Math.ceil((maxCount + 1) / yStep) * yStep
+    } else {
+      yMax  = 100
+      yStep = 10
+    }
+
     new Chart(ctx, {
-      type: 'bar',
+      type: useLine ? 'line' : 'bar',
       data: {
         labels: hours,
-        datasets: [
-          { label: 'In',  data: in_counts,  backgroundColor: '#2563eb', borderWidth: 1 },
-          { label: 'Out', data: out_counts, backgroundColor: '#dc2626', borderWidth: 1 },
-        ],
+        datasets: useLine
+          ? [
+              { label: 'In',  data: in_counts,  borderColor: '#2563eb', backgroundColor: '#2563eb', pointRadius: 2, tension: 0.25, fill: false },
+              { label: 'Out', data: out_counts, borderColor: '#dc2626', backgroundColor: '#dc2626', pointRadius: 2, tension: 0.25, fill: false },
+            ]
+          : [
+              { label: 'In',  data: in_counts,  backgroundColor: '#2563eb', borderWidth: 1 },
+              { label: 'Out', data: out_counts, backgroundColor: '#dc2626', borderWidth: 1 },
+            ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -118,11 +154,12 @@ async function loadChart() {
         scales: {
           x: { stacked: false, ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
           y: {
-            // Fixed 0-100 range (per user preference) — keeps the scale
-            // consistent day to day rather than rescaling to the busiest
-            // hour, at the cost of bars looking small on quiet days.
-            min: 0, max: 100,
-            ticks: { color: tc, stepSize: 10, precision: 0 },
+            // Fixed 0-100/step-10 while counts stay small (per user
+            // preference, keeps day-to-day scale consistent). Once any
+            // hourly count tops 100, switch to an auto-growing "nice"
+            // range/step (100s, 1000s, ...) so the line chart never clips.
+            min: 0, max: yMax,
+            ticks: { color: tc, stepSize: yStep, precision: 0 },
             grid: { color: gc },
             title: { display: true, text: 'People count', color: tc, font: { size: 11 } },
           },

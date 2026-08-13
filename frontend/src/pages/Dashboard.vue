@@ -109,6 +109,35 @@
       />
     </div>
 
+    <!-- Customer Traffic (people / occupancy) -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <select v-model="trafficFilter"
+                class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+          <option value="day">Last 1 Day</option>
+          <option value="week">Last 1 Week</option>
+          <option value="month">Last 1 Month</option>
+          <option value="3months">Last 3 Months</option>
+          <option value="year">Last 1 Year</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        <template v-if="trafficFilter === 'custom'">
+          <input type="date" v-model="trafficCustomFrom"
+                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          <span class="text-sm text-gray-400">to</span>
+          <input type="date" v-model="trafficCustomTo"
+                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+        </template>
+      </div>
+      <PeopleTrafficChart
+        :filter="trafficFilter"
+        :camera="showAllCams ? 'all' : selectedCam"
+        :customFrom="trafficFilter === 'custom' ? trafficCustomFromISO : null"
+        :customTo="trafficFilter === 'custom' ? trafficCustomToISO : null"
+        :darkMode="dark"
+      />
+    </div>
+
     <!-- Filter Row (for table & chart) -->
     <div class="flex items-center gap-2 flex-wrap mb-3">
       <select v-model="activeFilter"
@@ -188,17 +217,6 @@
       </div>
     </section>
 
-    <!-- Customer Traffic (people / occupancy) -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mt-3 mb-3">
-      <PeopleTrafficChart
-        :filter="activeFilter"
-        :camera="showAllCams ? 'all' : selectedCam"
-        :customFrom="activeFilter === 'custom' ? customFromISO : null"
-        :customTo="activeFilter === 'custom' ? customToISO : null"
-        :darkMode="dark"
-      />
-    </div>
-
     <ToastNotif :toasts="toasts" />
   </div>
 </template>
@@ -249,6 +267,18 @@ const customFromISO = computed(() =>
 )
 const customToISO = computed(() =>
   customTo.value ? new Date(customTo.value + 'T23:59:59').toISOString() : null
+)
+
+// Independent filter for the Customer Traffic chart (separate from the
+// table/chart filter row below it, per user request).
+const trafficFilter   = ref('day')
+const trafficCustomFrom = ref('')
+const trafficCustomTo   = ref('')
+const trafficCustomFromISO = computed(() =>
+  trafficCustomFrom.value ? new Date(trafficCustomFrom.value + 'T00:00:00').toISOString() : null
+)
+const trafficCustomToISO = computed(() =>
+  trafficCustomTo.value ? new Date(trafficCustomTo.value + 'T23:59:59').toISOString() : null
 )
 
 const router = useRouter()
