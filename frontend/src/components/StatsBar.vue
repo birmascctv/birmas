@@ -32,16 +32,26 @@ const props = defineProps({
 const counts = ref({ added: 0, sold: 0, restock: 0 })
 
 const PERIOD_LABELS = {
-  day: 'Last 1 Day', week: 'Last 1 Week', month: 'Last 1 Month',
+  day: 'Today', week: 'Last 1 Week', month: 'Last 1 Month',
   '3months': 'Last 3 Months', year: 'Last 1 Year', custom: 'Custom Range',
 }
-const periodLabel = computed(() => PERIOD_LABELS[props.filter] || 'Last 1 Day')
+const periodLabel = computed(() => PERIOD_LABELS[props.filter] || 'Today')
 
 function getStartDate(filter) {
   if (filter === 'custom' && props.customFrom) return props.customFrom
+  if (filter === 'day') {
+    // "Today" = start of today in WIB (Jakarta local time), not a rolling
+    // 24-hour window — matches TimelineScrubber's day-boundary convention
+    // (naive datetime string, compared directly against the naive-WIB
+    // timestamps stored in the DB).
+    const now = new Date()
+    const wib = new Date(now.getTime() + (now.getTimezoneOffset() + 7 * 60) * 60000)
+    const pad = n => String(n).padStart(2, '0')
+    return `${wib.getFullYear()}-${pad(wib.getMonth() + 1)}-${pad(wib.getDate())}T00:00:00`
+  }
   const now = new Date()
-  const map = { day: 1, week: 7, month: 30, '3months': 90, year: 365 }
-  now.setDate(now.getDate() - (map[filter] || 1))
+  const map = { week: 7, month: 30, '3months': 90, year: 365 }
+  now.setDate(now.getDate() - (map[filter] || 7))
   return now.toISOString()
 }
 

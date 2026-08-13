@@ -53,9 +53,19 @@ function gridColor() { return props.darkMode ? '#4b5563' : '#e5e7eb' }
 
 function getStartDate(filter) {
   if (filter === 'custom' && props.customFrom) return props.customFrom
+  if (filter === 'day') {
+    // "Today" = start of today in WIB (Jakarta local time), not a rolling
+    // 24-hour window — matches TimelineScrubber's day-boundary convention
+    // (naive datetime string, compared directly against the naive-WIB
+    // timestamps stored in the DB).
+    const now = new Date()
+    const wib = new Date(now.getTime() + (now.getTimezoneOffset() + 7 * 60) * 60000)
+    const pad = n => String(n).padStart(2, '0')
+    return `${wib.getFullYear()}-${pad(wib.getMonth() + 1)}-${pad(wib.getDate())}T00:00:00`
+  }
   const now = new Date()
-  const map = { day: 1, week: 7, month: 30, '3months': 90, year: 365 }
-  now.setDate(now.getDate() - (map[filter] || 1))
+  const map = { week: 7, month: 30, '3months': 90, year: 365 }
+  now.setDate(now.getDate() - (map[filter] || 7))
   return now.toISOString()
 }
 

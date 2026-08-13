@@ -114,7 +114,7 @@
       <div class="flex items-center gap-2 flex-wrap mb-2">
         <select v-model="trafficFilter"
                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-          <option value="day">Last 1 Day</option>
+          <option value="day">Today</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
           <option value="3months">Last 3 Months</option>
@@ -122,11 +122,21 @@
           <option value="custom">Custom Date</option>
         </select>
         <template v-if="trafficFilter === 'custom'">
-          <input type="date" v-model="trafficCustomFrom"
+          <button @click="shiftTrafficDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+            ◀
+          </button>
+          <input type="date" v-model="trafficDate"
                  class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
-          <span class="text-sm text-gray-400">to</span>
-          <input type="date" v-model="trafficCustomTo"
-                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          <button @click="shiftTrafficDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+            ▶
+          </button>
+          <button @click="trafficDate = todayStr()"
+                  class="h-8 px-2 rounded text-xs font-medium transition"
+                  :class="trafficDate === todayStr()
+                    ? 'bg-red-600 text-white'
+                    : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+            Today
+          </button>
         </template>
       </div>
       <PeopleTrafficChart
@@ -142,7 +152,7 @@
     <div class="flex items-center gap-2 flex-wrap mb-3">
       <select v-model="activeFilter"
               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-        <option value="day">Last 1 Day</option>
+        <option value="day">Today</option>
         <option value="week">Last 1 Week</option>
         <option value="month">Last 1 Month</option>
         <option value="3months">Last 3 Months</option>
@@ -270,16 +280,24 @@ const customToISO = computed(() =>
 )
 
 // Independent filter for the Customer Traffic chart (separate from the
-// table/chart filter row below it, per user request).
-const trafficFilter   = ref('day')
-const trafficCustomFrom = ref('')
-const trafficCustomTo   = ref('')
-const trafficCustomFromISO = computed(() =>
-  trafficCustomFrom.value ? new Date(trafficCustomFrom.value + 'T00:00:00').toISOString() : null
-)
-const trafficCustomToISO = computed(() =>
-  trafficCustomTo.value ? new Date(trafficCustomTo.value + 'T23:59:59').toISOString() : null
-)
+// table/chart filter row below it, per user request). The "custom" option
+// uses a single-date picker with prev/next/today controls, same UX as the
+// Timeline Scrubber above it (not a from/to range) — customFrom/customTo
+// are derived as that day's start/end (naive WIB datetime strings, matching
+// TimelineScrubber's own day-boundary convention).
+const trafficFilter = ref('day')
+const trafficDate   = ref(todayStr())
+function shiftTrafficDate (delta) {
+  const d = new Date(trafficDate.value + 'T00:00:00')
+  d.setDate(d.getDate() + delta)
+  trafficDate.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+const trafficCustomFromISO = computed(() => `${trafficDate.value}T00:00:00`)
+const trafficCustomToISO = computed(() => {
+  const d = new Date(trafficDate.value + 'T00:00:00')
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T00:00:00`
+})
 
 const router = useRouter()
 function logout() {
