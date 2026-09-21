@@ -248,6 +248,7 @@ const { dark, toggleDark } = useDarkMode()
 
 const cameras = [
   { id: 'cam1', name: 'Sudirman', thumbnail: '/images/sudirman.jpg' },
+  { id: 'office_reolink', name: 'Cawang Office', thumbnail: '/images/office_cawang.jpg' },
 ]
 
 const selectedCam  = ref('cam1')
