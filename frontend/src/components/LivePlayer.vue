@@ -2,13 +2,6 @@
   <div class="relative w-full h-full">
     <video ref="v" class="video-player" controls autoplay muted playsinline></video>
 
-    <!-- LIVE badge -->
-    <div v-if="!isOffline"
-         class="absolute bottom-12 right-2 z-20 flex items-center gap-1 bg-black bg-opacity-60 backdrop-blur-xs px-2 py-0.5 rounded text-white text-xs pointer-events-none">
-      <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-      LIVE
-    </div>
-
     <!-- Offline overlay -->
     <div v-if="isOffline"
          class="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center text-white text-sm gap-2 pointer-events-none">
