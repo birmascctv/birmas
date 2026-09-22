@@ -4,7 +4,7 @@
 
     <!-- LIVE badge -->
     <div v-if="!isOffline"
-         class="absolute top-2 left-2 flex items-center gap-1 bg-black bg-opacity-50 px-2 py-0.5 rounded text-white text-xs pointer-events-none">
+         class="absolute bottom-2 right-2 flex items-center gap-1 bg-black bg-opacity-50 px-2 py-0.5 rounded text-white text-xs pointer-events-none">
       <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
       LIVE
     </div>
