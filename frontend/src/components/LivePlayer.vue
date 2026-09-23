@@ -60,18 +60,18 @@ const loadStream = (src) => {
 
 hlsInstance = new Hls({
     lowLatencyMode:              false,
-    liveSyncDuration:            4,     // Target 2 seconds behind real-time
-    liveMaxLatencyDuration:      8,     // If delay exceeds 4 seconds, jump straight to the live edge!
-    maxBufferLength:             20,     // Only buffer 2 seconds in RAM
+    liveSyncDuration:            5,     // Target 2 seconds behind real-time
+    liveMaxLatencyDuration:      15,     // If delay exceeds 4 seconds, jump straight to the live edge!
+    maxBufferLength:             25,     // Only buffer 2 seconds in RAM
     maxMaxBufferLength:          40,
-    liveBackBufferLength:        4,     // Don't waste memory storing past frames
+    liveBackBufferLength:        5,     // Don't waste memory storing past frames
     enableWorker:                true,
-    fragLoadingMaxRetry:         6,
+    fragLoadingMaxRetry:         8,
     manifestLoadingMaxRetry:     8,
     levelLoadingMaxRetry:        8,
     fragLoadingRetryDelay:       500,
     manifestLoadingRetryDelay:   500,
-    fragLoadingMaxRetryTimeout:  10000,
+    fragLoadingMaxRetryTimeout:  12000,
   })
 
   hlsInstance.loadSource(url)
