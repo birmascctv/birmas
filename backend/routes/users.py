@@ -1,5 +1,7 @@
 import os
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.db import SessionLocal
 from backend.models import User
@@ -10,6 +12,7 @@ import logging
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn")
+security = HTTPBearer()
 
 def get_db():
     db = SessionLocal()
@@ -48,6 +51,26 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     
     SECRET_KEY = os.getenv("SECRET_KEY", "B1rm4sC4m3r4")
-    token = jwt.encode({"sub": str(db_user.id), "username": db_user.username}, SECRET_KEY, algorithm="HS256")
+    ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "12"))
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+
+    payload = {
+        "sub": str(db_user.id),
+        "username": db_user.username,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc)
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return {"access_token": token, "token_type": "bearer"}
 
+@router.get("/verify")
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    SECRET_KEY = os.getenv("SECRET_KEY", "B1rm4sC4m3r4")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return {"status": "ok", "user": payload.get("username")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")

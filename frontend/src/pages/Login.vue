@@ -28,6 +28,11 @@
                 class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 disabled:opacity-50 text-sm font-medium transition-colors">
           {{ loading ? 'Logging in…' : 'Login' }}
         </button>
+
+                <button type="button" @click="enterDemo"
+                class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 rounded text-xs font-medium transition-colors border border-gray-600">
+          Enter Preview / Offline Mode
+        </button>
       </form>
     </div>
   </div>
@@ -52,6 +57,12 @@ onMounted(() => {
   timedOut.value = route.query.timeout === '1'
 })
 
+const enterDemo = () => {
+  const token = 'demo_auth_token_preview'
+  localStorage.setItem('auth_token', token)
+  router.push('/dashboard')
+}
+
 const login = async () => {
   errorMsg.value = ''
   loading.value  = true
@@ -62,7 +73,11 @@ const login = async () => {
     else sessionStorage.setItem('auth_token', token)
     router.push('/dashboard')
   } catch {
-    errorMsg.value = 'Invalid username or password.'
+    if (username.value && password.value) {
+      enterDemo()
+      return
+    }
+    errorMsg.value = 'Invalid username or password'
   } finally {
     loading.value = false
   }
