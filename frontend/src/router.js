@@ -16,13 +16,46 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from) => {
-  const isAuth =
-    localStorage.getItem('auth_token') ||
-    sessionStorage.getItem('auth_token')
+  const tokenInSession = sessionStorage.getItem('auth_token')
+  const tokenInLocal = localStorage.getItem('auth_token')
+  const expiresAt = localStorage.getItem('auth_expires_at')
 
-  if (to.path.startsWith('/dashboard') && !isAuth) {
-    return '/login'
+  // Purge any legacy demo or invalid token strings
+  if (tokenInSession === 'undefined' || tokenInSession === 'demo_auth_token_preview') {
+    sessionStorage.removeItem('auth_token')
   }
+  if (tokenInLocal === 'undefined' || tokenInLocal === 'demo_auth_token_preview') {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_expires_at')
+  }
+
+  const activeSessionToken = sessionStorage.getItem('auth_token')
+  const activeLocalToken = localStorage.getItem('auth_token')
+
+  let isValid = false
+
+  if (activeSessionToken) {
+    // Session token is valid for the current tab lifetime
+    isValid = true
+  } else if (activeLocalToken) {
+    // Local storage token must be checked against expiration
+    if (expiresAt && Date.now() > parseInt(expiresAt, 10)) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_expires_at')
+      isValid = false
+    } else {
+      isValid = true
+    }
+  }
+
+  if (to.path.startsWith('/dashboard') && !isValid) {
+    return '/login?timeout=1'
+  }
+
+  if (to.path === '/login' && isValid && !to.query.timeout) {
+    return '/dashboard'
+  }
+
   return true
 })
 

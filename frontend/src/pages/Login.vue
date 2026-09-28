@@ -29,7 +29,7 @@
           {{ loading ? 'Logging in…' : 'Login' }}
         </button>
 
-                <button type="button" @click="enterDemo"
+        <button type="button" @click="enterDemo"
                 class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 rounded text-xs font-medium transition-colors border border-gray-600">
           Enter Preview / Offline Mode
         </button>
@@ -73,11 +73,12 @@ const login = async () => {
     else sessionStorage.setItem('auth_token', token)
     router.push('/dashboard')
   } catch {
+    // If user provided credentials but backend is offline, allow demo session
     if (username.value && password.value) {
       enterDemo()
       return
     }
-    errorMsg.value = 'Invalid username or password'
+    errorMsg.value = 'Invalid username or password.'
   } finally {
     loading.value = false
   }
