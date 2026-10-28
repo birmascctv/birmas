@@ -28,7 +28,7 @@
         </div>
 
         <button @click="logout"
-                class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-medium">
+                class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors">
           Logout
         </button>
       </div>
@@ -57,8 +57,8 @@
         <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">All Cameras</h2>
         <div class="grid grid-cols-3 gap-2">
           <div v-for="cam in cameras" :key="cam.id"
-               class="relative aspect-video rounded-md overflow-hidden cursor-pointer border-2"
-               :class="selectedCam === cam.id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
+               class="relative aspect-video rounded-md overflow-hidden cursor-pointer border-2 transition-all"
+               :class="selectedCam === cam.id ? 'border-red-500 ring-2 ring-red-500/30' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'"
                @click="selectedCam = cam.id">
             <img :src="cam.thumbnail" alt="Camera thumbnail"
                  class="w-full h-full object-cover" />
@@ -73,159 +73,162 @@
       </div>
     </section>
 
-    <!-- Stats Bar -->
-    <StatsBar
-      :camera="showAllCams ? 'all' : selectedCam"
-      :filter="activeFilter"
-      :customFrom="activeFilter === 'custom' ? customFromISO : null"
-      :customTo="activeFilter === 'custom' ? customToISO : null"
-    />
-
-    <!-- Timeline Scrubber -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3 mt-3 min-h-[260px]">
-      <div class="flex items-center gap-2 flex-wrap mb-2">
-        <h2 class="text-base sm:text-lg font-semibold text-red-600">Timeline</h2>
-        <div class="ml-auto flex items-center gap-2">
-          <button @click="shiftDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
-            ◀
-          </button>
-          <input type="date" v-model="timelineDate"
-                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
-          <button @click="shiftDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
-            ▶
-          </button>
-          <button @click="timelineDate = todayStr()"
-                  class="h-8 px-2 rounded text-xs font-medium transition"
-                  :class="timelineDate === todayStr()
-                    ? 'bg-red-600 text-white'
-                    : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
-            Today
-          </button>
-        </div>
-      </div>
-      <TimelineScrubber
-        :date="timelineDate"
+    <!-- Hidden for now as requested: everything below selected cameras and all cameras -->
+    <div v-if="showLowerSections">
+      <!-- Stats Bar -->
+      <StatsBar
         :camera="showAllCams ? 'all' : selectedCam"
+        :filter="activeFilter"
+        :customFrom="activeFilter === 'custom' ? customFromISO : null"
+        :customTo="activeFilter === 'custom' ? customToISO : null"
       />
-    </div>
 
-    <!-- Customer Traffic (people / occupancy) -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3">
-      <div class="flex items-center gap-2 flex-wrap mb-2">
-        <select v-model="trafficFilter"
+      <!-- Timeline Scrubber -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3 mt-3 min-h-[260px]">
+        <div class="flex items-center gap-2 flex-wrap mb-2">
+          <h2 class="text-base sm:text-lg font-semibold text-red-600">Timeline</h2>
+          <div class="ml-auto flex items-center gap-2">
+            <button @click="shiftDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+              ◀
+            </button>
+            <input type="date" v-model="timelineDate"
+                   class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+            <button @click="shiftDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+              ▶
+            </button>
+            <button @click="timelineDate = todayStr()"
+                    class="h-8 px-2 rounded text-xs font-medium transition"
+                    :class="timelineDate === todayStr()
+                      ? 'bg-red-600 text-white'
+                      : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+              Today
+            </button>
+          </div>
+        </div>
+        <TimelineScrubber
+          :date="timelineDate"
+          :camera="showAllCams ? 'all' : selectedCam"
+        />
+      </div>
+
+      <!-- Customer Traffic (people / occupancy) -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 mb-3">
+        <div class="flex items-center gap-2 flex-wrap mb-2">
+          <select v-model="trafficFilter"
+                  class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+            <option value="day">Today</option>
+            <option value="week">Last 1 Week</option>
+            <option value="month">Last 1 Month</option>
+            <option value="3months">Last 3 Months</option>
+            <option value="year">Last 1 Year</option>
+            <option value="custom">Custom Date</option>
+          </select>
+          <template v-if="trafficFilter === 'custom'">
+            <button @click="shiftTrafficDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+              ◀
+            </button>
+            <input type="date" v-model="trafficDate"
+                   class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+            <button @click="shiftTrafficDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
+              ▶
+            </button>
+            <button @click="trafficDate = todayStr()"
+                    class="h-8 px-2 rounded text-xs font-medium transition"
+                    :class="trafficDate === todayStr()
+                      ? 'bg-red-600 text-white'
+                      : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+              Today
+            </button>
+          </template>
+        </div>
+        <PeopleTrafficChart
+          :filter="trafficFilter"
+          :camera="showAllCams ? 'all' : selectedCam"
+          :customFrom="trafficFilter === 'custom' ? trafficCustomFromISO : null"
+          :customTo="trafficFilter === 'custom' ? trafficCustomToISO : null"
+          :darkMode="dark"
+        />
+      </div>
+
+      <!-- Filter Row (for table & chart) -->
+      <div class="flex items-center gap-2 flex-wrap mb-3">
+        <select v-model="activeFilter"
                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
           <option value="day">Today</option>
           <option value="week">Last 1 Week</option>
           <option value="month">Last 1 Month</option>
           <option value="3months">Last 3 Months</option>
           <option value="year">Last 1 Year</option>
-          <option value="custom">Custom Date</option>
+          <option value="custom">Custom Range</option>
         </select>
-        <template v-if="trafficFilter === 'custom'">
-          <button @click="shiftTrafficDate(-1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
-            ◀
-          </button>
-          <input type="date" v-model="trafficDate"
+        <template v-if="activeFilter === 'custom'">
+          <input type="date" v-model="customFrom"
                  class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
-          <button @click="shiftTrafficDate(1)" class="h-8 w-8 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-sm transition">
-            ▶
-          </button>
-          <button @click="trafficDate = todayStr()"
-                  class="h-8 px-2 rounded text-xs font-medium transition"
-                  :class="trafficDate === todayStr()
-                    ? 'bg-red-600 text-white'
-                    : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
-            Today
-          </button>
+          <span class="text-sm text-gray-400">to</span>
+          <input type="date" v-model="customTo"
+                 class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
         </template>
+
+        <!-- Status filter -->
+        <select v-model="filterStatus"
+                class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+          <option value="all">All Status</option>
+          <option value="added">Detected</option>
+          <option value="sold">Sold</option>
+          <option value="restock">Restocked</option>
+          <option value="missing">Missing</option>
+        </select>
+
+        <!-- Confidence filter -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Conf ≥</span>
+          <input type="range" min="0" max="99" step="1" v-model.number="minConfidence"
+                 class="w-20 h-1.5 accent-red-600 cursor-pointer" />
+          <span class="text-xs font-medium w-8 text-gray-700 dark:text-gray-200">{{ minConfidence }}%</span>
+          <button v-if="minConfidence > 0" @click="minConfidence = 0"
+                  class="text-xs text-gray-400 hover:text-red-500 leading-none">✕</button>
+        </div>
+
+        <!-- Cam toggle -->
+        <div class="ml-auto flex items-center gap-2 select-none">
+          <span class="text-sm font-medium" :class="!showAllCams ? 'text-red-600' : 'text-gray-400'">
+            <span class="hidden sm:inline">Selected Cam</span><span class="sm:hidden">Cam</span>
+          </span>
+          <button @click="showAllCams = !showAllCams" role="switch" :aria-checked="showAllCams"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                  :class="showAllCams ? 'bg-red-600' : 'bg-gray-300'">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                  :class="showAllCams ? 'translate-x-6' : 'translate-x-1'"></span>
+          </button>
+          <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">All</span>
+        </div>
       </div>
-      <PeopleTrafficChart
-        :filter="trafficFilter"
-        :camera="showAllCams ? 'all' : selectedCam"
-        :customFrom="trafficFilter === 'custom' ? trafficCustomFromISO : null"
-        :customTo="trafficFilter === 'custom' ? trafficCustomToISO : null"
-        :darkMode="dark"
-      />
+
+      <!-- Table + Chart -->
+      <section class="grid grid-cols-1 xl:grid-cols-2 gap-3 items-stretch">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
+          <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Recent Events</h2>
+          <EventTable
+            :filter="activeFilter"
+            :camera="showAllCams ? 'all' : selectedCam"
+            :customFrom="activeFilter === 'custom' ? customFromISO : null"
+            :customTo="activeFilter === 'custom' ? customToISO : null"
+            :minConfidence="minConfidence"
+            :filterStatus="filterStatus"
+          />
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
+          <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Product Count Statistics</h2>
+          <CountChart
+            :filter="activeFilter"
+            :camera="showAllCams ? 'all' : selectedCam"
+            :customFrom="activeFilter === 'custom' ? customFromISO : null"
+            :customTo="activeFilter === 'custom' ? customToISO : null"
+            :darkMode="dark"
+          />
+        </div>
+      </section>
     </div>
-
-    <!-- Filter Row (for table & chart) -->
-    <div class="flex items-center gap-2 flex-wrap mb-3">
-      <select v-model="activeFilter"
-              class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-        <option value="day">Today</option>
-        <option value="week">Last 1 Week</option>
-        <option value="month">Last 1 Month</option>
-        <option value="3months">Last 3 Months</option>
-        <option value="year">Last 1 Year</option>
-        <option value="custom">Custom Range</option>
-      </select>
-      <template v-if="activeFilter === 'custom'">
-        <input type="date" v-model="customFrom"
-               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
-        <span class="text-sm text-gray-400">to</span>
-        <input type="date" v-model="customTo"
-               class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
-      </template>
-
-      <!-- Status filter -->
-      <select v-model="filterStatus"
-              class="h-8 px-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-        <option value="all">All Status</option>
-        <option value="added">Detected</option>
-        <option value="sold">Sold</option>
-        <option value="restock">Restocked</option>
-        <option value="missing">Missing</option>
-      </select>
-
-      <!-- Confidence filter -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Conf ≥</span>
-        <input type="range" min="0" max="99" step="1" v-model.number="minConfidence"
-               class="w-20 h-1.5 accent-red-600 cursor-pointer" />
-        <span class="text-xs font-medium w-8 text-gray-700 dark:text-gray-200">{{ minConfidence }}%</span>
-        <button v-if="minConfidence > 0" @click="minConfidence = 0"
-                class="text-xs text-gray-400 hover:text-red-500 leading-none">✕</button>
-      </div>
-
-      <!-- Cam toggle -->
-      <div class="ml-auto flex items-center gap-2 select-none">
-        <span class="text-sm font-medium" :class="!showAllCams ? 'text-red-600' : 'text-gray-400'">
-          <span class="hidden sm:inline">Selected Cam</span><span class="sm:hidden">Cam</span>
-        </span>
-        <button @click="showAllCams = !showAllCams" role="switch" :aria-checked="showAllCams"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-                :class="showAllCams ? 'bg-red-600' : 'bg-gray-300'">
-          <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                :class="showAllCams ? 'translate-x-6' : 'translate-x-1'"></span>
-        </button>
-        <span class="text-sm font-medium" :class="showAllCams ? 'text-red-600' : 'text-gray-400'">All</span>
-      </div>
-    </div>
-
-    <!-- Table + Chart -->
-    <section class="grid grid-cols-1 xl:grid-cols-2 gap-3 items-stretch">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
-        <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Recent Events</h2>
-        <EventTable
-          :filter="activeFilter"
-          :camera="showAllCams ? 'all' : selectedCam"
-          :customFrom="activeFilter === 'custom' ? customFromISO : null"
-          :customTo="activeFilter === 'custom' ? customToISO : null"
-          :minConfidence="minConfidence"
-          :filterStatus="filterStatus"
-        />
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 flex flex-col border border-gray-200 dark:border-gray-700 min-h-[400px]">
-        <h2 class="text-base sm:text-lg font-semibold text-red-600 mb-2">Product Count Statistics</h2>
-        <CountChart
-          :filter="activeFilter"
-          :camera="showAllCams ? 'all' : selectedCam"
-          :customFrom="activeFilter === 'custom' ? customFromISO : null"
-          :customTo="activeFilter === 'custom' ? customToISO : null"
-          :darkMode="dark"
-        />
-      </div>
-    </section>
 
     <ToastNotif :toasts="toasts" />
   </div>
@@ -245,6 +248,9 @@ import PeopleTrafficChart from '../components/PeopleTrafficChart.vue'
 import API from '../api'
 
 const { dark, toggleDark } = useDarkMode()
+
+// Toggle to hide everything below cameras for now
+const showLowerSections = ref(false)
 
 const cameras = [
   { id: 'cam1', name: 'Sudirman', thumbnail: '/images/sudirman.jpg' },
@@ -280,12 +286,6 @@ const customToISO = computed(() =>
   customTo.value ? new Date(customTo.value + 'T23:59:59').toISOString() : null
 )
 
-// Independent filter for the Customer Traffic chart (separate from the
-// table/chart filter row below it, per user request). The "custom" option
-// uses a single-date picker with prev/next/today controls, same UX as the
-// Timeline Scrubber above it (not a from/to range) — customFrom/customTo
-// are derived as that day's start/end (naive WIB datetime strings, matching
-// TimelineScrubber's own day-boundary convention).
 const trafficFilter = ref('day')
 const trafficDate   = ref(todayStr())
 function shiftTrafficDate (delta) {
@@ -346,22 +346,30 @@ const statusInterval = setInterval(fetchCameraStatus, 10000)
 const STATUS_LABELS = { added: 'Detected', sold: 'Sold', restock: 'Restocked' }
 const toasts = ref([])
 let toastIdCounter = 0
-const toastWs = new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/events`)
-toastWs.onmessage = (msg) => {
-  const ev = JSON.parse(msg.data)
-  const id = ++toastIdCounter
-  toasts.value = [
-    { id, brand: ev.product_brand || 'Unknown', product: ev.product_name || 'Unknown',
-      event_type: ev.event_type, statusLabel: STATUS_LABELS[ev.event_type] || ev.event_type || '—' },
-    ...toasts.value,
-  ].slice(0, 3)
-  setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id) }, 4000)
-}
+let toastWs = null
+try {
+  toastWs = new WebSocket(`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/events`)
+  toastWs.onmessage = (msg) => {
+    try {
+      const ev = JSON.parse(msg.data)
+      const id = ++toastIdCounter
+      toasts.value = [
+        { id, brand: ev.product_brand || 'Unknown', product: ev.product_name || 'Unknown',
+          event_type: ev.event_type, statusLabel: STATUS_LABELS[ev.event_type] || ev.event_type || '—' },
+        ...toasts.value,
+      ].slice(0, 3)
+      setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id) }, 4000)
+    } catch (_) {}
+  }
+  toastWs.onerror = () => {}
+} catch (_) {}
 
 onUnmounted(() => {
   clearInterval(statusInterval)
   clearTimeout(idleTimer); clearTimeout(warnTimer)
   ACTIVITY_EVENTS.forEach(e => document.removeEventListener(e, resetIdleTimer))
-  toastWs.close()
+  if (toastWs && toastWs.readyState === WebSocket.OPEN) {
+    toastWs.close()
+  }
 })
 </script>
