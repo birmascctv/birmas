@@ -7,7 +7,7 @@
       <!-- Idle timeout notice -->
       <div v-if="timedOut"
            class="mb-3 bg-amber-900 bg-opacity-40 border border-amber-700 text-amber-300 text-xs px-3 py-2 rounded">
-        Session expired due to inactivity. Please log in again.
+        Session expired. Please log in again.
       </div>
 
       <form @submit.prevent="login">
@@ -21,17 +21,12 @@
 
         <label class="flex items-center gap-2 mb-4 text-sm text-gray-300 cursor-pointer">
           <input type="checkbox" v-model="rememberMe" class="accent-red-600" />
-          Remember me
+          Remember me (12 hours)
         </label>
 
         <button type="submit" :disabled="loading"
                 class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 disabled:opacity-50 text-sm font-medium transition-colors">
           {{ loading ? 'Logging in…' : 'Login' }}
-        </button>
-
-        <button type="button" @click="enterDemo"
-                class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 rounded text-xs font-medium transition-colors border border-gray-600">
-          Enter Preview / Offline Mode
         </button>
       </form>
     </div>
@@ -57,28 +52,31 @@ onMounted(() => {
   timedOut.value = route.query.timeout === '1'
 })
 
-const enterDemo = () => {
-  const token = 'demo_auth_token_preview'
-  localStorage.setItem('auth_token', token)
-  router.push('/dashboard')
-}
-
 const login = async () => {
   errorMsg.value = ''
   loading.value  = true
   try {
-    const res   = await API.post('/users/login', { username: username.value, password: password.value })
-    const token = res.data.access_token
-    if (rememberMe.value) localStorage.setItem('auth_token', token)
-    else sessionStorage.setItem('auth_token', token)
-    router.push('/dashboard')
-  } catch {
-    // If user provided credentials but backend is offline, allow demo session
-    if (username.value && password.value) {
-      enterDemo()
-      return
+    const res = await API.post('/users/login', { username: username.value, password: password.value })
+    const token = res.data?.access_token
+    if (!token) {
+      throw new Error('Authentication failed: no access token returned.')
     }
-    errorMsg.value = 'Invalid username or password.'
+
+    // Session duration: 12 hours
+    const expiresAt = Date.now() + 12 * 60 * 60 * 1000
+
+    if (rememberMe.value) {
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_expires_at', expiresAt.toString())
+      sessionStorage.removeItem('auth_token')
+    } else {
+      sessionStorage.setItem('auth_token', token)
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_expires_at')
+    }
+    router.push('/dashboard')
+  } catch (err) {
+    errorMsg.value = err.response?.data?.detail || 'Invalid username or password.'
   } finally {
     loading.value = false
   }
